@@ -399,6 +399,42 @@
                     </ScrollViewer>
                 </DockPanel>
             </Border>
+
+            <!-- Attesa: pianeta Trame Future in rotazione durante le operazioni lunghe -->
+            <Border Grid.Column="0" Grid.ColumnSpan="4" Background="#B8FFFFFF"
+                    Visibility="{Binding IsSearching, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image Source="/Assets/icon-256.png" Width="76" Height="76"
+                           RenderTransformOrigin="0.5,0.5">
+                        <Image.RenderTransform>
+                            <RotateTransform Angle="0" />
+                        </Image.RenderTransform>
+                        <Image.Style>
+                            <Style TargetType="Image">
+                                <Style.Triggers>
+                                    <Trigger Property="IsVisible" Value="True">
+                                        <Trigger.EnterActions>
+                                            <BeginStoryboard x:Name="PlanetSpin">
+                                                <Storyboard RepeatBehavior="Forever">
+                                                    <DoubleAnimation
+                                                        Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                        From="0" To="360" Duration="0:0:2.6" />
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </Trigger.EnterActions>
+                                        <Trigger.ExitActions>
+                                            <StopStoryboard BeginStoryboardName="PlanetSpin" />
+                                        </Trigger.ExitActions>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Image.Style>
+                    </Image>
+                    <TextBlock Margin="0,12,0,0" FontSize="13" HorizontalAlignment="Center"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Text="Elaborazione in corso…" />
+                </StackPanel>
+            </Border>
         </Grid>
     </DockPanel>
 </UserControl>

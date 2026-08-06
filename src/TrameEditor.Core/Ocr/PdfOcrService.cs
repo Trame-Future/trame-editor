@@ -59,7 +59,7 @@ public static class PdfOcrService
 
                     var page = document.GetPage(pageNumber);
                     var pageHeight = page.GetPageSize().GetHeight();
-                    var canvas = new PdfCanvas(page.NewContentStreamAfter(), page.GetResources(), document);
+                    var canvas = TrameEditor.Core.Pdf.PdfOverlayCanvas.Create(document, page);
                     canvas.BeginText();
                     canvas.SetTextRenderingMode(PdfCanvasConstants.TextRenderingMode.INVISIBLE);
 

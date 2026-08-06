@@ -131,6 +131,42 @@ public class PdfTextEditTests : IDisposable
         Assert.Contains("Seconda riga di prova", texts);
     }
 
+    /// <summary>
+    /// Riproduce il bug segnalato dal beta test (CV generato da Word): il content
+    /// stream della pagina termina con una trasformazione attiva (q/cm senza Q).
+    /// Il testo sostitutivo, disegnato in coda, la ereditava e finiva scalato e
+    /// fuori posto ("la riga sparisce").
+    /// </summary>
+    [Fact]
+    public void Replace_PageWithLeftoverTransform_KeepsPositionOfOriginal()
+    {
+        var path = Path.Combine(_dir, "trasformazione.pdf");
+        using (var document = new iText.Kernel.Pdf.PdfDocument(new iText.Kernel.Pdf.PdfWriter(path)))
+        {
+            var page = document.AddNewPage(new iText.Kernel.Geom.PageSize(595, 842));
+            var font = iText.Kernel.Font.PdfFontFactory.CreateFont(
+                iText.IO.Font.Constants.StandardFonts.HELVETICA);
+            var fontName = page.GetResources().AddFont(document, font);
+            // cm attivo e mai richiuso: baseline in coordinate dispositivo = (95, 475)
+            var content = $"q 0.75 0 0 0.75 20 100 cm\nBT /{fontName.GetValue()} 16 Tf 100 500 Td (Telefono 123456) Tj ET\n";
+            page.NewContentStreamAfter().SetData(System.Text.Encoding.ASCII.GetBytes(content));
+        }
+
+        var line = LineContaining(path, "Telefono");
+        var target = Path.Combine(_dir, "trasformazione-out.pdf");
+        var plan = PdfTextReplacer.PlanFor(path, line, "Cellulare 999");
+
+        PdfTextReplacer.Replace(path, target, line, "Cellulare 999", plan);
+
+        var replaced = LineContaining(target, "Cellulare 999");
+        Assert.True(Math.Abs(replaced.BaselineY - line.BaselineY) < 2.0,
+            $"baseline spostata: {line.BaselineY} → {replaced.BaselineY}");
+        Assert.True(Math.Abs(replaced.Left - line.Left) < 2.0,
+            $"riga spostata in orizzontale: {line.Left} → {replaced.Left}");
+        Assert.True(Math.Abs(replaced.FontSizePt - line.FontSizePt) < 1.5,
+            $"corpo font cambiato: {line.FontSizePt} → {replaced.FontSizePt}");
+    }
+
     [Fact]
     public void Replace_LineNotInPageStream_ThrowsHonestError()
     {

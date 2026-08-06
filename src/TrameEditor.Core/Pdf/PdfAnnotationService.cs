@@ -64,7 +64,8 @@ public static class PdfAnnotationService
                 (float)(centerY - heightPt / 2),
                 (float)widthPt,
                 (float)heightPt);
-            new PdfCanvas(page).AddImageFittedIntoRectangle(image, rect, asInline: false);
+            PdfOverlayCanvas.Create(document, page)
+                .AddImageFittedIntoRectangle(image, rect, asInline: false);
         });
     }
 

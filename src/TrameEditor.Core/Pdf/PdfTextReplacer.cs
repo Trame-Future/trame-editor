@@ -75,7 +75,7 @@ public static class PdfTextReplacer
                         throw new PdfTextEditException(
                             $"Il font scelto non contiene questi caratteri: {string.Join(" ", missing)}.");
 
-                    var canvas = new PdfCanvas(page.NewContentStreamAfter(), page.GetResources(), document);
+                    var canvas = PdfOverlayCanvas.Create(document, page);
                     canvas.BeginText()
                         .SetFontAndSize(font, (float)line.FontSizePt)
                         .SetColor(new DeviceRgb((float)line.ColorR, (float)line.ColorG, (float)line.ColorB), true)
