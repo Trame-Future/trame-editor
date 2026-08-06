@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\TrameEditor.Core\TrameEditor.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\Markdown.xshd" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AvalonEdit" Version="6.3.1.120" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Docnet.Core" Version="2.6.0" />
+    <PackageReference Include="Fluent.Ribbon" Version="11.0.2" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>TrameEditor</AssemblyName>
+    <ApplicationIcon>Assets\trameeditor.ico</ApplicationIcon>
+    <Version>0.4.0</Version>
+    <Product>TrameEditor</Product>
+    <Company>Trame Future srls</Company>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\logo-tramefuture.png" />
+    <Resource Include="Assets\icon-256.png" />
+  </ItemGroup>
+
+</Project>

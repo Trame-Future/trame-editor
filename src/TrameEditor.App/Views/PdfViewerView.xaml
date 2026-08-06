@@ -1,0 +1,267 @@
+<UserControl x:Class="TrameEditor.App.Views.PdfViewerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:TrameEditor.App.ViewModels">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Style="{StaticResource ToolbarBand}">
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal">
+                    <ToggleButton Style="{StaticResource TbToggle}" IsChecked="{Binding EditMode}"
+                                  ToolTip="Attiva la modifica del testo: clicca una riga sulla pagina">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource TbIcon}" Text="&#xE70F;" />
+                            <TextBlock Style="{StaticResource TbLabel}" Text="Modifica testo" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <Rectangle Style="{StaticResource TbSeparator}" />
+                    <Button Style="{StaticResource TbButton}" ToolTip="Ruota a sinistra le pagine selezionate"
+                            Command="{Binding RotateLeftCommand}">
+                        <TextBlock FontSize="15" Text="⟲" />
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" ToolTip="Ruota a destra le pagine selezionate"
+                            Command="{Binding RotateRightCommand}">
+                        <TextBlock FontSize="15" Text="⟳" />
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" ToolTip="Elimina le pagine selezionate"
+                            Command="{Binding DeleteSelectedCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource TbIcon}" Text="&#xE74D;" />
+                            <TextBlock Style="{StaticResource TbLabel}" Text="Elimina" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" ToolTip="Sposta in su le pagine selezionate"
+                            Command="{Binding MoveUpCommand}">
+                        <TextBlock Style="{StaticResource TbIcon}" Text="&#xE74A;" />
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" ToolTip="Sposta in giù le pagine selezionate"
+                            Command="{Binding MoveDownCommand}">
+                        <TextBlock Style="{StaticResource TbIcon}" Text="&#xE74B;" />
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" ToolTip="Estrai le pagine selezionate in un nuovo PDF"
+                            Command="{Binding ExtractSelectedCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource TbIcon}" Text="&#xE8C8;" />
+                            <TextBlock Style="{StaticResource TbLabel}" Text="Estrai…" />
+                        </StackPanel>
+                    </Button>
+                    <Rectangle Style="{StaticResource TbSeparator}" />
+                    <Button Style="{StaticResource TbButton}" ToolTip="Riduci zoom" Command="{Binding ZoomOutCommand}">
+                        <TextBlock Style="{StaticResource TbIcon}" Text="&#xE71F;" />
+                    </Button>
+                    <TextBlock Text="{Binding ZoomDisplay}" VerticalAlignment="Center"
+                               MinWidth="42" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+                    <Button Style="{StaticResource TbButton}" ToolTip="Aumenta zoom" Command="{Binding ZoomInCommand}">
+                        <TextBlock Style="{StaticResource TbIcon}" Text="&#xE8A3;" />
+                    </Button>
+                    <Rectangle Style="{StaticResource TbSeparator}" />
+                    <TextBox Width="170" Style="{StaticResource TbTextBox}"
+                             ToolTip="Cerca nel testo del PDF (Invio per cercare)"
+                             Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding SearchCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <Button Style="{StaticResource TbButton}" ToolTip="Cerca nel testo del PDF"
+                            Command="{Binding SearchCommand}">
+                        <TextBlock Style="{StaticResource TbIcon}" Text="&#xE721;" />
+                    </Button>
+                    <TextBlock VerticalAlignment="Center" Margin="4,0" Foreground="{StaticResource TextMutedBrush}">
+                        <Run Text="{Binding SearchMatches.Count, Mode=OneWay}" /><Run Text=" risultati" />
+                    </TextBlock>
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Margin="6,0"
+                           Foreground="{StaticResource TextMutedBrush}">
+                    <Run Text="{Binding Pages.Count, Mode=OneWay}" /><Run Text=" pagine" />
+                </TextBlock>
+            </DockPanel>
+        </Border>
+        <Border DockPanel.Dock="Top" Background="#FFF6E0" BorderBrush="#E0C880" BorderThickness="0,1"
+                Visibility="{Binding ActiveRegion, Converter={StaticResource NullToVisibility}}">
+            <StackPanel Margin="10,7">
+                <DockPanel>
+                    <TextBlock Text="Nuovo testo:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <Button DockPanel.Dock="Right" Style="{StaticResource TbButton}" Margin="4,0,0,0"
+                            Command="{Binding CancelEditCommand}">
+                        <TextBlock Text="Annulla" />
+                    </Button>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource TbButton}" Margin="10,0,0,0"
+                            Command="{Binding ApplyEditCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource TbIcon}" Text="&#xE73E;" />
+                            <TextBlock Style="{StaticResource TbLabel}" Text="Applica" FontWeight="Bold" />
+                        </StackPanel>
+                    </Button>
+                    <TextBox Style="{StaticResource TbTextBox}" FontSize="14"
+                             Text="{Binding EditText, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding ApplyEditCommand}" />
+                            <KeyBinding Key="Escape" Command="{Binding CancelEditCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                </DockPanel>
+                <TextBlock Margin="0,5,0,0" FontSize="11" Foreground="#8A6D3B"
+                           Text="{Binding PlanDescription, StringFormat='Font che verrà usato: {0}'}" />
+            </StackPanel>
+        </Border>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="170" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Miniature: qui si selezionano le pagine per le operazioni -->
+            <ListBox x:Name="ThumbList" ItemsSource="{Binding Pages}"
+                     SelectionMode="Extended" SelectionChanged="ThumbList_SelectionChanged"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     Background="#F3F3F3" BorderThickness="0,0,1,0" BorderBrush="#DDDDDD">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                        <Setter Property="HorizontalContentAlignment" Value="Center" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:PdfPageViewModel}">
+                        <StackPanel Margin="4">
+                            <Border Background="White" BorderBrush="#BBBBBB" BorderThickness="1"
+                                    HorizontalAlignment="Center">
+                                <Image Source="{Binding Thumbnail}" MaxWidth="110"
+                                       Loaded="Thumb_Loaded">
+                                    <Image.LayoutTransform>
+                                        <RotateTransform Angle="{Binding RotationDelta}" />
+                                    </Image.LayoutTransform>
+                                </Image>
+                            </Border>
+                            <TextBlock Text="{Binding PageNumber}" HorizontalAlignment="Center"
+                                       Foreground="#666666" FontSize="11" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Pagine -->
+            <ListBox x:Name="PageList" Grid.Column="1" ItemsSource="{Binding Pages}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     Background="{StaticResource CanvasBrush}" BorderThickness="0"
+                     HorizontalContentAlignment="Center"
+                     PreviewMouseWheel="PageList_PreviewMouseWheel"
+                     VirtualizingPanel.ScrollUnit="Pixel">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Center" />
+                        <Setter Property="Focusable" Value="False" />
+                        <Setter Property="Background" Value="Transparent" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:PdfPageViewModel}">
+                        <Border Margin="14,10" Background="White" HorizontalAlignment="Center"
+                                BorderBrush="#C8C6C4" BorderThickness="1">
+                            <Grid>
+                                <Image Source="{Binding Image}" Loaded="Page_Loaded" Stretch="Uniform">
+                                    <Image.Width>
+                                        <MultiBinding Converter="{StaticResource Multiply}">
+                                            <Binding Path="BaseWidth" />
+                                            <Binding Path="DataContext.Zoom"
+                                                     RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                        </MultiBinding>
+                                    </Image.Width>
+                                    <Image.LayoutTransform>
+                                        <RotateTransform Angle="{Binding RotationDelta}" />
+                                    </Image.LayoutTransform>
+                                </Image>
+                                <ItemsControl ItemsSource="{Binding EditRegions}"
+                                              Visibility="{Binding DataContext.EditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibility}}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left">
+                                                <Setter.Value>
+                                                    <MultiBinding Converter="{StaticResource Multiply}">
+                                                        <Binding Path="X" />
+                                                        <Binding Path="DataContext.Zoom"
+                                                                 RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                    </MultiBinding>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Setter Property="Canvas.Top">
+                                                <Setter.Value>
+                                                    <MultiBinding Converter="{StaticResource Multiply}">
+                                                        <Binding Path="Y" />
+                                                        <Binding Path="DataContext.Zoom"
+                                                                 RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                    </MultiBinding>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:PdfTextRegionViewModel}">
+                                            <Border BorderThickness="1" CornerRadius="1" Cursor="Hand"
+                                                    MouseLeftButtonDown="Region_MouseDown"
+                                                    ToolTip="{Binding ToolTipText}">
+                                                <Border.Width>
+                                                    <MultiBinding Converter="{StaticResource Multiply}">
+                                                        <Binding Path="Width" />
+                                                        <Binding Path="DataContext.Zoom"
+                                                                 RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                    </MultiBinding>
+                                                </Border.Width>
+                                                <Border.Height>
+                                                    <MultiBinding Converter="{StaticResource Multiply}">
+                                                        <Binding Path="Height" />
+                                                        <Binding Path="DataContext.Zoom"
+                                                                 RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                    </MultiBinding>
+                                                </Border.Height>
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="BorderBrush" Value="#8032A0FF" />
+                                                        <Setter Property="Background" Value="#1432A0FF" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsEditable}" Value="False">
+                                                                <Setter Property="BorderBrush" Value="#60999999" />
+                                                                <Setter Property="Background" Value="#10999999" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Risultati ricerca -->
+            <ListBox Grid.Column="2" ItemsSource="{Binding SearchMatches}"
+                     SelectedItem="{Binding SelectedMatch}"
+                     SelectionChanged="Matches_SelectionChanged"
+                     BorderThickness="1,0,0,0" BorderBrush="#DDDDDD">
+                <ListBox.Style>
+                    <Style TargetType="ListBox">
+                        <Setter Property="Width" Value="240" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SearchMatches.Count}" Value="0">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ListBox.Style>
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:PdfSearchMatch}">
+                        <TextBlock Text="{Binding Display}" TextWrapping="Wrap" FontSize="12" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </DockPanel>
+</UserControl>

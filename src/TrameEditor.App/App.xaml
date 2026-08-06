@@ -1,0 +1,25 @@
+<Application x:Class="TrameEditor.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:TrameEditor.App.ViewModels"
+             xmlns:views="clr-namespace:TrameEditor.App.Views"
+             xmlns:converters="clr-namespace:TrameEditor.App.Converters"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/Fluent;component/Themes/Generic.xaml" />
+                <ResourceDictionary Source="Themes/OfficeTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        <converters:MultiplyConverter x:Key="Multiply" />
+        <converters:NullToVisibilityConverter x:Key="NullToVisibility" />
+        <DataTemplate DataType="{x:Type vm:TextDocumentViewModel}">
+            <views:TextEditorView />
+        </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:PdfDocumentViewModel}">
+                <views:PdfViewerView />
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

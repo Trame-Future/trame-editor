@@ -1,0 +1,28 @@
+<Window x:Class="TrameEditor.App.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Informazioni su TrameEditor"
+        Width="460" SizeToContent="Height"
+        ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="White">
+    <StackPanel Margin="32,28">
+        <Image Source="Assets/logo-tramefuture.png" Width="270" Margin="0,0,0,18" />
+        <TextBlock Text="TrameEditor" FontSize="26" FontWeight="Bold"
+                   HorizontalAlignment="Center" Foreground="{StaticResource AccentBrush}" />
+        <TextBlock x:Name="VersionText" HorizontalAlignment="Center"
+                   Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,16" />
+        <TextBlock TextWrapping="Wrap" TextAlignment="Center" FontSize="13" LineHeight="21">
+            TrameEditor è un prodotto gratuito e open source di
+            <Bold>Trame Future srls</Bold>, distribuito con licenza AGPL-3.0.<LineBreak />
+            Editor per file PDF, TXT e Markdown: nessun abbonamento, nessuna raccolta
+            di dati, i tuoi documenti non lasciano mai il computer.
+        </TextBlock>
+        <TextBlock HorizontalAlignment="Center" Margin="0,14,0,0" FontSize="14">
+            <Hyperlink NavigateUri="https://www.tramefuture.com"
+                       RequestNavigate="Link_RequestNavigate">www.tramefuture.com</Hyperlink>
+        </TextBlock>
+        <Button Content="Chiudi" Width="100" Padding="0,5" Margin="0,22,0,0"
+                HorizontalAlignment="Center" IsCancel="True" IsDefault="True" />
+    </StackPanel>
+</Window>

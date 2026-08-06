@@ -1,0 +1,160 @@
+<fluent:RibbonWindow x:Class="TrameEditor.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:fluent="urn:fluent-ribbon"
+        xmlns:vm="clr-namespace:TrameEditor.App.ViewModels"
+        Title="{Binding WindowTitle}"
+        Icon="Assets/icon-256.png"
+        Width="1200" Height="780"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource ChromeBrush}"
+        UseLayoutRounding="True"
+        AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver">
+    <fluent:RibbonWindow.InputBindings>
+        <KeyBinding Modifiers="Control" Key="N" Command="{Binding NewDocumentCommand}" />
+        <KeyBinding Modifiers="Control" Key="O" Command="{Binding OpenFileCommand}" />
+        <KeyBinding Modifiers="Control" Key="S" Command="{Binding SaveCommand}" />
+        <KeyBinding Modifiers="Control+Shift" Key="S" Command="{Binding SaveAsCommand}" />
+        <KeyBinding Modifiers="Control" Key="W" Command="{Binding CloseActiveDocumentCommand}" />
+    </fluent:RibbonWindow.InputBindings>
+    <DockPanel>
+        <fluent:Ribbon DockPanel.Dock="Top">
+            <fluent:Ribbon.Menu>
+                <fluent:ApplicationMenu Header="File" MinWidth="240">
+                    <fluent:MenuItem Header="Nuovo" InputGestureText="Ctrl+N"
+                                     Command="{Binding NewDocumentCommand}" />
+                    <fluent:MenuItem Header="Apri…" InputGestureText="Ctrl+O"
+                                     Command="{Binding OpenFileCommand}" />
+                    <Separator />
+                    <fluent:MenuItem Header="Salva" InputGestureText="Ctrl+S"
+                                     Command="{Binding SaveCommand}" />
+                    <fluent:MenuItem Header="Salva con nome…" InputGestureText="Ctrl+Maiusc+S"
+                                     Command="{Binding SaveAsCommand}" />
+                    <Separator />
+                    <fluent:MenuItem Header="Esporta anteprima HTML…"
+                                     Command="{Binding ExportHtmlCommand}" />
+                    <fluent:MenuItem Header="Unisci PDF…"
+                                     Command="{Binding MergePdfsCommand}" />
+                    <Separator />
+                    <fluent:MenuItem Header="Chiudi scheda" InputGestureText="Ctrl+W"
+                                     Command="{Binding CloseActiveDocumentCommand}" />
+                    <fluent:MenuItem Header="Informazioni su TrameEditor…" Click="About_Click" />
+                    <fluent:MenuItem Header="Esci" Click="Exit_Click" />
+                </fluent:ApplicationMenu>
+            </fluent:Ribbon.Menu>
+
+            <fluent:RibbonTabItem Header="Home">
+                <fluent:RibbonGroupBox Header="Documento">
+                    <fluent:Button Header="Nuovo" Focusable="False" ToolTip="Nuovo documento (Ctrl+N)"
+                                   Command="{Binding NewDocumentCommand}">
+                        <fluent:Button.LargeIcon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
+                                       Foreground="{StaticResource AccentBrush}" Text="&#xE7C3;" />
+                        </fluent:Button.LargeIcon>
+                    </fluent:Button>
+                    <fluent:Button Header="Apri" Focusable="False" ToolTip="Apri file (Ctrl+O)"
+                                   Command="{Binding OpenFileCommand}">
+                        <fluent:Button.LargeIcon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
+                                       Foreground="{StaticResource AccentBrush}" Text="&#xE8E5;" />
+                        </fluent:Button.LargeIcon>
+                    </fluent:Button>
+                    <fluent:Button Header="Salva" Focusable="False" ToolTip="Salva (Ctrl+S)"
+                                   Command="{Binding SaveCommand}">
+                        <fluent:Button.LargeIcon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
+                                       Foreground="{StaticResource AccentBrush}" Text="&#xE74E;" />
+                        </fluent:Button.LargeIcon>
+                    </fluent:Button>
+                    <fluent:Button Header="Salva con nome" Size="Middle" Focusable="False"
+                                   Command="{Binding SaveAsCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE792;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
+                    <fluent:Button Header="Chiudi scheda" Size="Middle" Focusable="False"
+                                   Command="{Binding CloseActiveDocumentCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE711;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
+                </fluent:RibbonGroupBox>
+
+                <fluent:RibbonGroupBox Header="Modifica">
+                    <fluent:Button Header="Annulla" Size="Middle" Focusable="False" Command="Undo">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE7A7;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
+                    <fluent:Button Header="Ripeti" Size="Middle" Focusable="False" Command="Redo">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE7A6;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
+                    <fluent:Button Header="Trova" Size="Middle" Focusable="False" Command="Find">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE721;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
+                </fluent:RibbonGroupBox>
+
+                <fluent:RibbonGroupBox Header="Visualizza">
+                    <fluent:CheckBox Header="A capo automatico" IsChecked="{Binding WordWrap}" />
+                    <fluent:CheckBox Header="Numeri di riga" IsChecked="{Binding ShowLineNumbers}" />
+                    <fluent:CheckBox Header="Anteprima Markdown"
+                                     IsChecked="{Binding SelectedDocument.ShowPreview}" />
+                </fluent:RibbonGroupBox>
+
+                <fluent:RibbonGroupBox Header="Strumenti">
+                    <fluent:Button Header="Unisci PDF" Focusable="False"
+                                   ToolTip="Unisci più PDF in un unico file"
+                                   Command="{Binding MergePdfsCommand}">
+                        <fluent:Button.LargeIcon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
+                                       Foreground="{StaticResource AccentBrush}" Text="&#xEA37;" />
+                        </fluent:Button.LargeIcon>
+                    </fluent:Button>
+                    <fluent:Button Header="Esporta HTML" Focusable="False"
+                                   ToolTip="Esporta l'anteprima Markdown come pagina HTML"
+                                   Command="{Binding ExportHtmlCommand}">
+                        <fluent:Button.LargeIcon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
+                                       Foreground="{StaticResource AccentBrush}" Text="&#xE774;" />
+                        </fluent:Button.LargeIcon>
+                    </fluent:Button>
+                </fluent:RibbonGroupBox>
+
+                <fluent:RibbonGroupBox Header="Informazioni">
+                    <fluent:Button Header="Trame Future" Focusable="False"
+                                   ToolTip="Informazioni su TrameEditor" Click="About_Click">
+                        <fluent:Button.LargeIcon>
+                            <Image Source="Assets/icon-256.png" Width="32" Height="32" />
+                        </fluent:Button.LargeIcon>
+                    </fluent:Button>
+                </fluent:RibbonGroupBox>
+            </fluent:RibbonTabItem>
+        </fluent:Ribbon>
+
+        <StatusBar DockPanel.Dock="Bottom" Style="{StaticResource OfficeStatusBar}">
+            <StatusBarItem>
+                <TextBlock Text="{Binding SelectedDocument.FormatDisplay}" Foreground="White" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <TabControl ItemsSource="{Binding Documents}"
+                    SelectedItem="{Binding SelectedDocument}"
+                    Style="{StaticResource DocTabControl}"
+                    ItemContainerStyle="{StaticResource DocTabItem}">
+            <TabControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:DocumentTabViewModel}">
+                    <StackPanel Orientation="Horizontal" ToolTip="{Binding FilePath}">
+                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                        <Button Style="{StaticResource TabCloseButton}" ToolTip="Chiudi scheda"
+                                Command="{Binding DataContext.CloseDocumentCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"
+                                CommandParameter="{Binding}" />
+                    </StackPanel>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+        </TabControl>
+    </DockPanel>
+</fluent:RibbonWindow>
