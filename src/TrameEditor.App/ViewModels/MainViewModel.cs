@@ -155,6 +155,33 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ExportPdf()
+    {
+        if (SelectedDocument is not TextDocumentViewModel { IsMarkdown: true } document)
+        {
+            ShowError("L'export PDF è disponibile solo per i file Markdown (.md).");
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = "PDF (*.pdf)|*.pdf",
+            FileName = Path.ChangeExtension(document.FileName, ".pdf"),
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            MarkdownPdfExporter.Export(document.EditorDocument.Text, document.FileName, dialog.FileName);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Export PDF non riuscito:\n{ex.Message}");
+        }
+    }
+
+    [RelayCommand]
     private void MergePdfs()
     {
         var openDialog = new OpenFileDialog

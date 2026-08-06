@@ -31,6 +31,10 @@ public partial class PdfPageViewModel : ObservableObject
     [ObservableProperty]
     private double _baseWidth = 595;
 
+    /// <summary>Altezza a zoom 100% (coincide con i punti PDF), per convertire i click in coordinate PDF.</summary>
+    [ObservableProperty]
+    private double _baseHeight = 842;
+
     /// <summary>Righe di testo cliccabili in modalità "Modifica testo".</summary>
     public ObservableCollection<PdfTextRegionViewModel> EditRegions { get; } = [];
 
@@ -49,7 +53,9 @@ public partial class PdfPageViewModel : ObservableObject
         {
             var image = await _renderer.RenderPageAsync(OriginalIndex);
             Image = image;
-            BaseWidth = ((System.Windows.Media.Imaging.BitmapSource)image).PixelWidth / PdfRenderService.FullScale;
+            var bitmap = (System.Windows.Media.Imaging.BitmapSource)image;
+            BaseWidth = bitmap.PixelWidth / PdfRenderService.FullScale;
+            BaseHeight = bitmap.PixelHeight / PdfRenderService.FullScale;
         }
         catch
         {

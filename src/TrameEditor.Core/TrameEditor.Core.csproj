@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="itext" Version="9.7.0" />
     <PackageReference Include="itext.bouncy-castle-adapter" Version="9.7.0" />
+    <PackageReference Include="itext.pdfhtml" Version="6.3.3" />
     <PackageReference Include="Markdig" Version="1.3.2" />
     <PackageReference Include="PdfPig" Version="0.1.15" />
     <PackageReference Include="PDFsharp" Version="6.2.4" />

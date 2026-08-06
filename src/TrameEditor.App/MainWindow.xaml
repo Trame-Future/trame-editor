@@ -33,6 +33,8 @@
                     <Separator />
                     <fluent:MenuItem Header="Esporta anteprima HTML…"
                                      Command="{Binding ExportHtmlCommand}" />
+                    <fluent:MenuItem Header="Esporta PDF…"
+                                     Command="{Binding ExportPdfCommand}" />
                     <fluent:MenuItem Header="Unisci PDF…"
                                      Command="{Binding MergePdfsCommand}" />
                     <Separator />
@@ -120,6 +122,14 @@
                         <fluent:Button.LargeIcon>
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
                                        Foreground="{StaticResource AccentBrush}" Text="&#xE774;" />
+                        </fluent:Button.LargeIcon>
+                    </fluent:Button>
+                    <fluent:Button Header="Esporta PDF" Focusable="False"
+                                   ToolTip="Converte il documento Markdown in un PDF"
+                                   Command="{Binding ExportPdfCommand}">
+                        <fluent:Button.LargeIcon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
+                                       Foreground="{StaticResource AccentBrush}" Text="&#xE8A5;" />
                         </fluent:Button.LargeIcon>
                     </fluent:Button>
                 </fluent:RibbonGroupBox>

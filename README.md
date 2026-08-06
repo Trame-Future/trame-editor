@@ -28,7 +28,8 @@ dotnet run --project src/TrameEditor.App
 
 ```powershell
 dotnet publish src/TrameEditor.App -c Release -r win-x64 --self-contained true -o dist/publish
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\TrameEditor.iss
+# ISCC.exe è in "%LOCALAPPDATA%\Programs\Inno Setup 6" o "C:\Program Files (x86)\Inno Setup 6"
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer\TrameEditor.iss
 # → dist\TrameEditor-Setup-<versione>.exe
 ```
 

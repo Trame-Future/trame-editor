@@ -13,6 +13,30 @@
                             <TextBlock Style="{StaticResource TbLabel}" Text="Modifica testo" />
                         </StackPanel>
                     </ToggleButton>
+                    <ToggleButton Style="{StaticResource TbToggle}"
+                                  IsChecked="{Binding AnnotationTool, Converter={StaticResource EnumToBool}, ConverterParameter=Highlight}"
+                                  ToolTip="Evidenzia: clicca una riga di testo sulla pagina">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource TbIcon}" Text="&#xE7E6;" />
+                            <TextBlock Style="{StaticResource TbLabel}" Text="Evidenzia" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Style="{StaticResource TbToggle}"
+                                  IsChecked="{Binding AnnotationTool, Converter={StaticResource EnumToBool}, ConverterParameter=Note}"
+                                  ToolTip="Nota: clicca un punto della pagina e scrivi il testo">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource TbIcon}" Text="&#xE8BD;" />
+                            <TextBlock Style="{StaticResource TbLabel}" Text="Nota" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Style="{StaticResource TbToggle}"
+                                  IsChecked="{Binding AnnotationTool, Converter={StaticResource EnumToBool}, ConverterParameter=Stamp}"
+                                  ToolTip="Timbro: scegli un'immagine (firma, logo) e clicca dove metterla">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource TbIcon}" Text="&#xE91B;" />
+                            <TextBlock Style="{StaticResource TbLabel}" Text="Timbro" />
+                        </StackPanel>
+                    </ToggleButton>
                     <Rectangle Style="{StaticResource TbSeparator}" />
                     <Button Style="{StaticResource TbButton}" ToolTip="Ruota a sinistra le pagine selezionate"
                             Command="{Binding RotateLeftCommand}">
@@ -159,7 +183,8 @@
                         <Border Margin="14,10" Background="White" HorizontalAlignment="Center"
                                 BorderBrush="#C8C6C4" BorderThickness="1">
                             <Grid>
-                                <Image Source="{Binding Image}" Loaded="Page_Loaded" Stretch="Uniform">
+                                <Image Source="{Binding Image}" Loaded="Page_Loaded" Stretch="Uniform"
+                                       MouseLeftButtonDown="PageImage_MouseDown">
                                     <Image.Width>
                                         <MultiBinding Converter="{StaticResource Multiply}">
                                             <Binding Path="BaseWidth" />
@@ -172,7 +197,7 @@
                                     </Image.LayoutTransform>
                                 </Image>
                                 <ItemsControl ItemsSource="{Binding EditRegions}"
-                                              Visibility="{Binding DataContext.EditMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibility}}">
+                                              Visibility="{Binding DataContext.ShowRegions, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibility}}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <Canvas />

@@ -12,11 +12,12 @@
                 <ResourceDictionary Source="Themes/OfficeTheme.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-        <converters:MultiplyConverter x:Key="Multiply" />
-        <converters:NullToVisibilityConverter x:Key="NullToVisibility" />
-        <DataTemplate DataType="{x:Type vm:TextDocumentViewModel}">
-            <views:TextEditorView />
-        </DataTemplate>
+            <converters:MultiplyConverter x:Key="Multiply" />
+            <converters:NullToVisibilityConverter x:Key="NullToVisibility" />
+            <converters:EnumToBoolConverter x:Key="EnumToBool" />
+            <DataTemplate DataType="{x:Type vm:TextDocumentViewModel}">
+                <views:TextEditorView />
+            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:PdfDocumentViewModel}">
                 <views:PdfViewerView />
             </DataTemplate>

@@ -38,12 +38,27 @@ public partial class PdfViewerView : UserControl
 
     private void Region_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (((FrameworkElement)sender).DataContext is PdfTextRegionViewModel region &&
-            DataContext is PdfDocumentViewModel vm)
-        {
+        if (((FrameworkElement)sender).DataContext is not PdfTextRegionViewModel region ||
+            DataContext is not PdfDocumentViewModel vm)
+            return;
+
+        if (vm.AnnotationTool == PdfAnnotationTool.Highlight)
+            vm.HighlightRegionCommand.Execute(region);
+        else
             vm.BeginEditCommand.Execute(region);
-            e.Handled = true;
-        }
+        e.Handled = true;
+    }
+
+    private async void PageImage_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not PdfDocumentViewModel vm ||
+            vm.AnnotationTool is PdfAnnotationTool.None or PdfAnnotationTool.Highlight ||
+            ((FrameworkElement)sender).DataContext is not PdfPageViewModel page)
+            return;
+
+        var position = e.GetPosition((IInputElement)sender);
+        e.Handled = true;
+        await vm.HandlePageClickAsync(page, position.X / vm.Zoom, position.Y / vm.Zoom);
     }
 
     private void PageList_PreviewMouseWheel(object sender, MouseWheelEventArgs e)

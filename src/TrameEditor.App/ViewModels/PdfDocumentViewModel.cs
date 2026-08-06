@@ -14,6 +14,14 @@ public sealed record PdfSearchMatch(PdfPageViewModel Page, string Snippet)
     public string Display => $"Pag. {Page.PageNumber} — {Snippet}";
 }
 
+public enum PdfAnnotationTool
+{
+    None,
+    Highlight,
+    Note,
+    Stamp,
+}
+
 public partial class PdfDocumentViewModel : DocumentTabViewModel
 {
     private const string PdfFilter = "PDF (*.pdf)|*.pdf";
@@ -41,6 +49,14 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
 
     [ObservableProperty]
     private bool _editMode;
+
+    [ObservableProperty]
+    private PdfAnnotationTool _annotationTool = PdfAnnotationTool.None;
+
+    private string? _stampImagePath;
+
+    /// <summary>Le regioni cliccabili servono sia alla modifica testo sia all'evidenziazione.</summary>
+    public bool ShowRegions => EditMode || AnnotationTool == PdfAnnotationTool.Highlight;
 
     [ObservableProperty]
     private PdfTextRegionViewModel? _activeRegion;
@@ -234,22 +250,69 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     {
         if (value)
         {
-            try
+            AnnotationTool = PdfAnnotationTool.None;
+            if (!EnsureRegionsLoaded())
             {
-                _inspector ??= new PdfTextInspector(_workingPath);
-            }
-            catch (Exception ex)
-            {
-                ShowInfo($"Impossibile analizzare il testo del PDF:\n{ex.Message}");
                 EditMode = false;
                 return;
             }
-            _ = LoadAllRegionsAsync();
         }
         else
         {
             ActiveRegion = null;
         }
+        OnPropertyChanged(nameof(ShowRegions));
+    }
+
+    partial void OnAnnotationToolChanged(PdfAnnotationTool value)
+    {
+        if (value != PdfAnnotationTool.None)
+        {
+            EditMode = false;
+            ActiveRegion = null;
+        }
+
+        if (value == PdfAnnotationTool.Highlight && !EnsureRegionsLoaded())
+        {
+            AnnotationTool = PdfAnnotationTool.None;
+            return;
+        }
+
+        if (value == PdfAnnotationTool.Stamp)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = "Scegli l'immagine da usare come timbro",
+                Filter = "Immagini (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg",
+            };
+            if (dialog.ShowDialog() == true)
+            {
+                _stampImagePath = dialog.FileName;
+            }
+            else
+            {
+                AnnotationTool = PdfAnnotationTool.None;
+                return;
+            }
+        }
+
+        OnPropertyChanged(nameof(ShowRegions));
+    }
+
+    /// <summary>Prepara l'ispettore del testo e avvia il caricamento delle regioni.</summary>
+    private bool EnsureRegionsLoaded()
+    {
+        try
+        {
+            _inspector ??= new PdfTextInspector(_workingPath);
+        }
+        catch (Exception ex)
+        {
+            ShowInfo($"Impossibile analizzare il testo del PDF:\n{ex.Message}");
+            return false;
+        }
+        _ = LoadAllRegionsAsync();
+        return true;
     }
 
     private async Task LoadAllRegionsAsync()
@@ -261,7 +324,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
 
         foreach (var page in Pages.ToList())
         {
-            if (version != _regionsVersion || !EditMode)
+            if (version != _regionsVersion || !ShowRegions)
                 return;
             page.EditRegions.Clear();
             if (page.RotationDelta != 0)
@@ -387,10 +450,71 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         SearchMatches.Clear();
         SelectedMatch = null;
 
-        if (EditMode)
+        if (ShowRegions)
         {
             _inspector = new PdfTextInspector(newWorkingPath);
             _ = LoadAllRegionsAsync();
+        }
+    }
+
+    // ----- Annotazioni (M4): evidenzia, nota, timbro immagine -----
+
+    /// <summary>Click su una regione di testo con lo strumento Evidenzia attivo.</summary>
+    [RelayCommand]
+    private Task HighlightRegionAsync(PdfTextRegionViewModel region)
+    {
+        var line = region.Line;
+        return ApplyPdfOperationAsync((source, target) =>
+            PdfAnnotationService.HighlightArea(source, target,
+                line.PageNumber, line.Left, line.Bottom, line.Width, line.Height));
+    }
+
+    /// <summary>Click sulla pagina con Nota o Timbro attivi; coordinate in unità
+    /// display a zoom 100% (equivalenti ai punti PDF), origine in alto a sinistra.</summary>
+    public async Task HandlePageClickAsync(PdfPageViewModel page, double x, double y)
+    {
+        if (page.RotationDelta != 0)
+        {
+            ShowInfo("La pagina ha una rotazione in sospeso: salva prima il PDF, poi annota.");
+            return;
+        }
+
+        var pageNumber = page.OriginalIndex + 1;
+        var pdfX = x;
+        var pdfY = page.BaseHeight - y;
+
+        switch (AnnotationTool)
+        {
+            case PdfAnnotationTool.Note:
+                var text = NoteDialog.Prompt();
+                if (text is null)
+                    return;
+                await ApplyPdfOperationAsync((source, target) =>
+                    PdfAnnotationService.AddNote(source, target, pageNumber, pdfX, pdfY, text));
+                break;
+
+            case PdfAnnotationTool.Stamp when _stampImagePath is not null:
+                var imagePath = _stampImagePath;
+                await ApplyPdfOperationAsync((source, target) =>
+                    PdfAnnotationService.StampImage(source, target, pageNumber, pdfX, pdfY, imagePath, 120));
+                break;
+        }
+    }
+
+    /// <summary>Applica un'operazione PDF alla working copy e ricarica il documento.</summary>
+    private async Task ApplyPdfOperationAsync(Action<string, string> operation)
+    {
+        try
+        {
+            var newWorking = NewTempPath();
+            await Task.Run(() => operation(_workingPath, newWorking));
+            SwapWorkingFile(newWorking);
+            IsDirty = true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Operazione non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
