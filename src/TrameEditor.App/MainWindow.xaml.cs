@@ -15,13 +15,14 @@ public partial class MainWindow : Fluent.RibbonWindow
         DataContext = _viewModel;
         Loaded += (_, _) =>
         {
+            var restoredDrafts = _viewModel.TryRestoreDrafts();
             var args = Environment.GetCommandLineArgs().Skip(1).Where(File.Exists).ToList();
             if (args.Count > 0)
             {
                 foreach (var path in args)
                     _viewModel.OpenPath(path);
             }
-            else
+            else if (!restoredDrafts)
             {
                 _viewModel.RestoreSession();
             }

@@ -24,7 +24,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>TrameEditor</AssemblyName>
     <ApplicationIcon>Assets\trameeditor.ico</ApplicationIcon>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Product>TrameEditor</Product>
     <Company>Trame Future srls</Company>
   </PropertyGroup>

@@ -16,6 +16,7 @@
         <KeyBinding Modifiers="Control" Key="S" Command="{Binding SaveCommand}" />
         <KeyBinding Modifiers="Control+Shift" Key="S" Command="{Binding SaveAsCommand}" />
         <KeyBinding Modifiers="Control" Key="W" Command="{Binding CloseActiveDocumentCommand}" />
+        <KeyBinding Modifiers="Control" Key="P" Command="{Binding PrintCommand}" />
     </fluent:RibbonWindow.InputBindings>
     <DockPanel>
         <fluent:Ribbon DockPanel.Dock="Top">
@@ -40,6 +41,8 @@
                                      Command="{Binding SaveCommand}" />
                     <fluent:MenuItem Header="Salva con nome…" InputGestureText="Ctrl+Maiusc+S"
                                      Command="{Binding SaveAsCommand}" />
+                    <fluent:MenuItem Header="Stampa…" InputGestureText="Ctrl+P"
+                                     Command="{Binding PrintCommand}" />
                     <Separator />
                     <fluent:MenuItem Header="Esporta anteprima HTML…"
                                      Command="{Binding ExportHtmlCommand}" />
@@ -88,6 +91,13 @@
                                    Command="{Binding CloseActiveDocumentCommand}">
                         <fluent:Button.Icon>
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE711;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
+                    <fluent:Button Header="Stampa" Size="Middle" Focusable="False"
+                                   ToolTip="Stampa il documento aperto (Ctrl+P)"
+                                   Command="{Binding PrintCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE749;" />
                         </fluent:Button.Icon>
                     </fluent:Button>
                 </fluent:RibbonGroupBox>
@@ -161,6 +171,13 @@
                                    Command="{Binding SelectedDocument.ExportTextCommand}">
                         <fluent:Button.Icon>
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE8A4;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
+                    <fluent:Button Header="Proteggi PDF" Size="Middle" Focusable="False"
+                                   ToolTip="Salva una copia del PDF protetta da password (AES-256)"
+                                   Command="{Binding SelectedDocument.ProtectCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE72E;" />
                         </fluent:Button.Icon>
                     </fluent:Button>
                 </fluent:RibbonGroupBox>

@@ -21,6 +21,8 @@ public partial class MainViewModel : ObservableObject
         "File di testo e Markdown (*.txt;*.md)|*.txt;*.md;*.markdown|Tutti i file (*.*)|*.*";
 
     private readonly SessionStore _sessionStore = SessionStore.CreateDefault();
+    private readonly DraftStore _draftStore = DraftStore.CreateDefault();
+    private readonly System.Windows.Threading.DispatcherTimer _autosaveTimer;
 
     public ObservableCollection<DocumentTabViewModel> Documents { get; } = [];
 
@@ -41,6 +43,81 @@ public partial class MainViewModel : ObservableObject
         foreach (var recent in _sessionStore.Load().RecentFiles)
             RecentFiles.Add(recent);
         NewDocument();
+        _autosaveTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(30),
+        };
+        _autosaveTimer.Tick += (_, _) => SaveDrafts();
+        _autosaveTimer.Start();
+    }
+
+    /// <summary>Autosalvataggio: bozze dei documenti di testo con modifiche non salvate.</summary>
+    private void SaveDrafts()
+    {
+        try
+        {
+            var dirty = Documents.OfType<TextDocumentViewModel>().Where(d => d.IsDirty).ToList();
+            foreach (var document in dirty)
+            {
+                _draftStore.Save(new DocumentDraft
+                {
+                    Id = document.DraftId,
+                    OriginalPath = document.FilePath,
+                    DisplayName = document.FileName,
+                    Content = document.EditorDocument.Text,
+                    SavedAtUtc = DateTime.UtcNow,
+                });
+            }
+            var activeIds = dirty.Select(d => d.DraftId).ToHashSet();
+            foreach (var stale in _draftStore.LoadAll().Where(d => !activeIds.Contains(d.Id)))
+                _draftStore.Delete(stale.Id);
+        }
+        catch
+        {
+            // l'autosalvataggio non deve mai disturbare il lavoro
+        }
+    }
+
+    /// <summary>All'avvio: se ci sono bozze la sessione precedente è stata interrotta.
+    /// Restituisce true se l'utente le ha ripristinate.</summary>
+    public bool TryRestoreDrafts()
+    {
+        var drafts = _draftStore.LoadAll();
+        if (drafts.Count == 0)
+            return false;
+
+        var answer = MessageBox.Show(
+            $"La sessione precedente si è interrotta con {drafts.Count} " +
+            (drafts.Count == 1 ? "documento non salvato" : "documenti non salvati") +
+            ".\nVuoi ripristinare le bozze?",
+            "TrameEditor", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        _draftStore.Clear();
+        if (answer != MessageBoxResult.Yes)
+            return false;
+
+        foreach (var draft in drafts)
+        {
+            var document = TextDocumentViewModel.CreateFromDraft(draft);
+            if (Documents is [TextDocumentViewModel { IsPristineUntitled: true } blank])
+                Documents.Remove(blank);
+            Documents.Add(document);
+            SelectedDocument = document;
+        }
+        return true;
+    }
+
+    [RelayCommand]
+    private void Print()
+    {
+        switch (SelectedDocument)
+        {
+            case PdfDocumentViewModel pdf:
+                pdf.PrintCommand.Execute(null);
+                break;
+            case TextDocumentViewModel text:
+                text.RequestPrint();
+                break;
+        }
     }
 
     /// <summary>Riapre i file dell'ultima sessione (chiamato all'avvio senza argomenti).</summary>
@@ -50,11 +127,14 @@ public partial class MainViewModel : ObservableObject
             OpenPath(path);
     }
 
-    /// <summary>Salva sessione e recenti (chiamato alla chiusura confermata).</summary>
+    /// <summary>Salva sessione e recenti (chiamato alla chiusura confermata).
+    /// La chiusura è pulita: le bozze di autosalvataggio non servono più.</summary>
     public void SaveSession()
     {
         try
         {
+            _autosaveTimer.Stop();
+            _draftStore.Clear();
             _sessionStore.Save(new SessionState
             {
                 OpenFiles = [.. Documents.Select(d => d.FilePath).OfType<string>()],
@@ -133,10 +213,19 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            DocumentTabViewModel document =
-                Path.GetExtension(path).ToLowerInvariant() == ".pdf"
-                    ? PdfDocumentViewModel.CreateFromFile(path)
-                    : TextDocumentViewModel.CreateFromFile(path);
+            DocumentTabViewModel? document;
+            if (Path.GetExtension(path).ToLowerInvariant() == ".pdf")
+            {
+                document = PdfCryptoService.IsPasswordProtected(path)
+                    ? OpenProtectedPdf(path)
+                    : PdfDocumentViewModel.CreateFromFile(path);
+                if (document is null)
+                    return; // apertura annullata dall'utente
+            }
+            else
+            {
+                document = TextDocumentViewModel.CreateFromFile(path);
+            }
             if (Documents is [TextDocumentViewModel { IsPristineUntitled: true } blank])
                 Documents.Remove(blank);
             Documents.Add(document);
@@ -146,6 +235,31 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             ShowError($"Impossibile aprire \"{path}\":\n{ex.Message}");
+        }
+    }
+
+    /// <summary>Chiede la password e apre il PDF su una copia decifrata temporanea.
+    /// Null se l'utente annulla.</summary>
+    private PdfDocumentViewModel? OpenProtectedPdf(string path)
+    {
+        while (true)
+        {
+            var password = PasswordDialog.Ask(Path.GetFileName(path));
+            if (password is null)
+                return null;
+
+            var workingDirectory = Path.Combine(Path.GetTempPath(), "TrameEditor");
+            Directory.CreateDirectory(workingDirectory);
+            var workingPath = Path.Combine(workingDirectory, $"{Guid.NewGuid():N}.pdf");
+            try
+            {
+                PdfCryptoService.Decrypt(path, workingPath, password);
+                return PdfDocumentViewModel.CreateFromFile(path, workingPath);
+            }
+            catch (iText.Kernel.Exceptions.BadPasswordException)
+            {
+                ShowError("Password errata: riprova.");
+            }
         }
     }
 
@@ -178,6 +292,8 @@ public partial class MainViewModel : ObservableObject
         if (!ConfirmClose(document))
             return;
         Documents.Remove(document);
+        if (document is TextDocumentViewModel text)
+            _draftStore.Delete(text.DraftId);
         document.Dispose();
     }
 

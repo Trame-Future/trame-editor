@@ -70,12 +70,48 @@ public partial class TextEditorView : UserControl
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (_vm is not null)
+        {
             _vm.PropertyChanged -= OnVmPropertyChanged;
+            _vm.PrintRequested -= OnPrintRequested;
+        }
         _vm = DataContext as TextDocumentViewModel;
         if (_vm is not null)
+        {
             _vm.PropertyChanged += OnVmPropertyChanged;
+            _vm.PrintRequested += OnPrintRequested;
+        }
         ApplyHighlighting();
         UpdatePreviewLayout();
+    }
+
+    /// <summary>Stampa: per il Markdown con anteprima attiva usa la resa HTML
+    /// (dialogo di stampa di WebView2); altrimenti stampa il testo impaginato.</summary>
+    private void OnPrintRequested(object? sender, EventArgs e)
+    {
+        if (_vm is null)
+            return;
+
+        if (_vm is { IsMarkdown: true, PreviewVisible: true } && _previewReady)
+        {
+            Preview.CoreWebView2.ShowPrintUI(CoreWebView2PrintDialogKind.System);
+            return;
+        }
+
+        var dialog = new System.Windows.Controls.PrintDialog();
+        if (dialog.ShowDialog() != true)
+            return;
+        var flowDocument = new System.Windows.Documents.FlowDocument(
+            new System.Windows.Documents.Paragraph(
+                new System.Windows.Documents.Run(Editor.Text)))
+        {
+            FontFamily = new System.Windows.Media.FontFamily("Cascadia Mono, Consolas, Courier New"),
+            FontSize = 12,
+            PagePadding = new Thickness(60),
+            ColumnWidth = double.PositiveInfinity,
+        };
+        var paginator = ((System.Windows.Documents.IDocumentPaginatorSource)flowDocument).DocumentPaginator;
+        paginator.PageSize = new Size(dialog.PrintableAreaWidth, dialog.PrintableAreaHeight);
+        dialog.PrintDocument(paginator, _vm.FileName);
     }
 
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)

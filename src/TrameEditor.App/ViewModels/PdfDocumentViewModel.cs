@@ -83,17 +83,24 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
 
     public string ZoomDisplay => $"{Zoom:P0}";
 
-    private PdfDocumentViewModel(string fullPath, PdfRenderService renderer)
+    private PdfDocumentViewModel(string fullPath, string workingPath, PdfRenderService renderer)
     {
         _renderer = renderer;
-        _workingPath = fullPath;
+        _workingPath = workingPath;
         FilePath = fullPath;
+        if (!string.Equals(workingPath, fullPath, StringComparison.OrdinalIgnoreCase))
+            _tempFiles.Add(workingPath); // copia decifrata: da ripulire alla chiusura
         for (var i = 0; i < renderer.PageCount; i++)
             Pages.Add(new PdfPageViewModel(renderer, i));
     }
 
     public static PdfDocumentViewModel CreateFromFile(string path) =>
-        new(Path.GetFullPath(path), new PdfRenderService(path));
+        CreateFromFile(path, path);
+
+    /// <summary>Apre mostrando <paramref name="path"/> come file del tab ma lavorando
+    /// su <paramref name="workingPath"/> (es. copia decifrata di un PDF protetto).</summary>
+    public static PdfDocumentViewModel CreateFromFile(string path, string workingPath) =>
+        new(Path.GetFullPath(path), workingPath, new PdfRenderService(workingPath));
 
     private List<PdfPageViewModel> SelectedPages() => [.. Pages.Where(p => p.IsSelected)];
 
@@ -738,6 +745,98 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         {
             MessageBox.Show($"Export testo non riuscito:\n{ex.Message}",
                 "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    // ----- Stampa e protezione (M7) -----
+
+    [RelayCommand]
+    private async Task PrintAsync()
+    {
+        var dialog = new System.Windows.Controls.PrintDialog();
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            IsSearching = true;
+            var fixedDocument = new System.Windows.Documents.FixedDocument();
+            var areaWidth = dialog.PrintableAreaWidth;
+            var areaHeight = dialog.PrintableAreaHeight;
+            foreach (var page in Pages.ToList())
+            {
+                var bitmap = await _renderer.RenderPageAsync(page.OriginalIndex);
+                BitmapSource source = page.RotationDelta != 0
+                    ? new TransformedBitmap(bitmap, new RotateTransform(page.RotationDelta))
+                    : bitmap;
+                var image = new System.Windows.Controls.Image
+                {
+                    Source = source,
+                    Stretch = Stretch.Uniform,
+                    Width = areaWidth,
+                    Height = areaHeight,
+                };
+                var fixedPage = new System.Windows.Documents.FixedPage
+                {
+                    Width = areaWidth,
+                    Height = areaHeight,
+                };
+                fixedPage.Children.Add(image);
+                var content = new System.Windows.Documents.PageContent();
+                ((System.Windows.Markup.IAddChild)content).AddChild(fixedPage);
+                fixedDocument.Pages.Add(content);
+            }
+            dialog.PrintDocument(fixedDocument.DocumentPaginator, FileName);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Stampa non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
+    /// <summary>Salva una copia protetta da password (AES-256), con le modifiche
+    /// alle pagine in sospeso applicate.</summary>
+    [RelayCommand]
+    private async Task ProtectAsync()
+    {
+        var password = PasswordDialog.CreateNew();
+        if (password is null)
+            return;
+        var dialog = new SaveFileDialog
+        {
+            Filter = PdfFilter,
+            FileName = Path.GetFileNameWithoutExtension(FileName) + " - protetto.pdf",
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            IsSearching = true;
+            var staged = NewTempPath();
+            var pages = Pages.Select(p => new PdfPageEdit(p.OriginalIndex, p.RotationDelta)).ToList();
+            var working = _workingPath;
+            var target = dialog.FileName;
+            await Task.Run(() =>
+            {
+                PdfPageOperations.Build(working, pages, staged);
+                PdfCryptoService.Encrypt(staged, target, password);
+            });
+            ShowInfo($"PDF protetto salvato: \"{Path.GetFileName(target)}\".\nConserva la password: senza non sarà apribile.");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Protezione non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsSearching = false;
         }
     }
 

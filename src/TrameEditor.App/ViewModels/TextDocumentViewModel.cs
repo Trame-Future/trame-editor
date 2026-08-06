@@ -52,7 +52,34 @@ public partial class TextDocumentViewModel : DocumentTabViewModel
 
     public bool PreviewVisible => IsMarkdown && ShowPreview;
 
+    /// <summary>Identità stabile della bozza di autosalvataggio di questo documento.</summary>
+    public Guid DraftId { get; private set; } = Guid.NewGuid();
+
+    /// <summary>La vista che ospita l'editor esegue la stampa quando richiesta.</summary>
+    public event EventHandler? PrintRequested;
+
+    public void RequestPrint() => PrintRequested?.Invoke(this, EventArgs.Empty);
+
     public static TextDocumentViewModel CreateUntitled() => new();
+
+    /// <summary>Ripristina una bozza di autosalvataggio (sessione interrotta).</summary>
+    public static TextDocumentViewModel CreateFromDraft(TrameEditor.Core.Session.DocumentDraft draft)
+    {
+        var document = new TextDocumentViewModel();
+        document._suppressDirtyTracking = true;
+        document.EditorDocument.Text = draft.Content;
+        document._suppressDirtyTracking = false;
+        document.EditorDocument.UndoStack.ClearAll();
+        document.DraftId = draft.Id;
+        if (draft.OriginalPath is not null)
+        {
+            document.FilePath = draft.OriginalPath;
+            if (File.Exists(draft.OriginalPath))
+                document.Format = TextFileService.Load(draft.OriginalPath).Format;
+        }
+        document.IsDirty = true;
+        return document;
+    }
 
     public static TextDocumentViewModel CreateFromFile(string path)
     {
