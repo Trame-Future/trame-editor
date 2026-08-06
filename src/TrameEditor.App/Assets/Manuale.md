@@ -70,6 +70,20 @@ Seleziona le pagine dalle miniature, poi:
 - Pulsante **OCR**: le pagine scansionate vengono riconosciute (italiano + inglese, tutto **offline**) e ricevono un layer di testo invisibile.
 - Dopo l'OCR il documento diventa **ricercabile** e il testo riconosciuto si può perfino modificare.
 
+## PDF — Anonimizza 🛡
+
+Il pulsante **Anonimizza…** trova automaticamente i dati personali nel documento:
+**codici fiscali, IBAN, email, numeri di telefono, targhe**.
+
+1. Controlla l'elenco e deseleziona gli eventuali falsi positivi.
+2. Conferma: i dati selezionati vengono **rimossi davvero** dal file (sostituiti da "X") —
+   non coperti con un rettangolo che lascia il testo copiabile sotto.
+3. Con la spunta attiva vengono ripuliti anche i **metadati** (autore, titolo, applicazione).
+
+Utile prima di inviare un documento a terzi. Se qualche riga non è rimovibile
+(testo dentro moduli grafici), l'app **te lo dice chiaramente**: mai una falsa sicurezza.
+Le scansioni vanno prima passate con l'**OCR**.
+
 ## PDF — altri strumenti
 
 - **Comprimi…** salva una copia alleggerita (immagini ricompresse) — utile per allegati email/PEC con limiti di peso.

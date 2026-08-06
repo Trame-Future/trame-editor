@@ -42,6 +42,10 @@ public sealed record PdfFontPlan(
     string? SystemFontPath,
     string? StandardFontName);
 
+/// <summary>Esito di una sostituzione multi-riga: le righe saltate (operatori non
+/// trovati nel flusso pagina) vanno sempre mostrate all'utente.</summary>
+public sealed record PdfReplaceManyResult(int LinesReplaced, IReadOnlyList<PdfTextLine> SkippedLines);
+
 /// <summary>Modifica non applicabile: il messaggio spiega il motivo all'utente.</summary>
 public sealed class PdfTextEditException : Exception
 {

@@ -55,6 +55,13 @@
                             <TextBlock Style="{StaticResource TbLabel}" Text="Comprimi…" />
                         </StackPanel>
                     </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding RedactCommand}"
+                            ToolTip="Trova e rimuove davvero i dati personali (CF, IBAN, email, telefoni, targhe) e i metadati">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe UI Emoji" FontSize="13" VerticalAlignment="Center" Text="🛡" />
+                            <TextBlock Style="{StaticResource TbLabel}" Text="Anonimizza…" />
+                        </StackPanel>
+                    </Button>
                     <Rectangle Style="{StaticResource TbSeparator}" />
                     <Button Style="{StaticResource TbButton}" ToolTip="Ruota a sinistra le pagine selezionate"
                             Command="{Binding RotateLeftCommand}">

@@ -23,8 +23,11 @@ public static class PdfTextReplacer
     public static PdfFontPlan PlanFor(string sourcePath, PdfTextLine line, string newText)
     {
         using var document = new PdfDocument(new PdfReader(sourcePath));
-        var page = document.GetPage(line.PageNumber);
+        return ResolvePlan(document.GetPage(line.PageNumber), line, newText);
+    }
 
+    private static PdfFontPlan ResolvePlan(PdfPage page, PdfTextLine line, string newText)
+    {
         var fontDict = FindFontDictionary(page, line.FontName);
         if (fontDict is not null && CanReuse(fontDict, newText))
             return new PdfFontPlan(PdfFontStrategy.ReuseEmbedded,
@@ -39,6 +42,73 @@ public static class PdfTextReplacer
         var standard = GuessStandardFont(line.FontName);
         return new PdfFontPlan(PdfFontStrategy.Substitute,
             $"font sostitutivo {standard}", null, standard);
+    }
+
+    /// <summary>
+    /// Sostituisce più righe in un solo passaggio (usato dall'anonimizzazione):
+    /// il piano font è risolto automaticamente riga per riga, i caratteri non
+    /// rappresentabili diventano '?'. Le righe i cui operatori non sono nel
+    /// flusso della pagina vengono riportate come saltate — mai silenziate.
+    /// </summary>
+    public static PdfReplaceManyResult ReplaceMany(string sourcePath, string targetPath,
+        IReadOnlyList<(PdfTextLine Line, string NewText)> edits)
+    {
+        var fullTarget = Path.GetFullPath(targetPath);
+        var directory = Path.GetDirectoryName(fullTarget)
+            ?? throw new ArgumentException($"Percorso senza cartella: {targetPath}", nameof(targetPath));
+        var tempPath = Path.Combine(directory, $".{Path.GetFileName(fullTarget)}.{Guid.NewGuid():N}.tmp");
+
+        var skipped = new List<PdfTextLine>();
+        var replaced = 0;
+        try
+        {
+            using (var document = new PdfDocument(new PdfReader(sourcePath), new PdfWriter(tempPath)))
+            {
+                foreach (var pageGroup in edits.GroupBy(e => e.Line.PageNumber))
+                {
+                    var page = document.GetPage(pageGroup.Key);
+                    var editor = new LineRemovalEditor(pageGroup.Select(e => e.Line).ToList());
+                    editor.EditPage(document, page);
+
+                    PdfCanvas? canvas = null;
+                    foreach (var (line, newText) in pageGroup)
+                    {
+                        if (editor.RemovedCountFor(line) == 0)
+                        {
+                            skipped.Add(line);
+                            continue;
+                        }
+                        replaced++;
+                        if (newText.Length == 0)
+                            continue;
+
+                        canvas ??= PdfOverlayCanvas.Create(document, page);
+                        var plan = ResolvePlan(page, line, newText);
+                        var font = CreateFont(page, plan, line);
+                        var safeText = new string(newText
+                            .Select(c => c == ' ' || font.ContainsGlyph(c) ? c : '?').ToArray());
+                        canvas.BeginText()
+                            .SetFontAndSize(font, (float)line.FontSizePt)
+                            .SetColor(new DeviceRgb((float)line.ColorR, (float)line.ColorG, (float)line.ColorB), true)
+                            .SetTextMatrix((float)line.BaselineX, (float)line.BaselineY)
+                            .ShowText(safeText)
+                            .EndText();
+                    }
+                }
+            }
+
+            if (File.Exists(fullTarget))
+                File.Replace(tempPath, fullTarget, destinationBackupFileName: null);
+            else
+                File.Move(tempPath, fullTarget);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+
+        return new PdfReplaceManyResult(replaced, skipped);
     }
 
     /// <summary>
@@ -232,20 +302,28 @@ public static class PdfTextReplacer
     /// </summary>
     private sealed class LineRemovalEditor : PdfCanvasProcessor
     {
-        private readonly PdfTextLine _line;
+        private readonly IReadOnlyList<PdfTextLine> _lines;
+        private readonly Dictionary<PdfTextLine, int> _removedPerLine = [];
         private readonly CaptureListener _listener;
         private PdfCanvas _canvas = null!;
         private int _xobjectDepth;
 
         public int RemovedCount { get; private set; }
 
-        public LineRemovalEditor(PdfTextLine line) : this(line, new CaptureListener())
+        public int RemovedCountFor(PdfTextLine line) =>
+            _removedPerLine.TryGetValue(line, out var count) ? count : 0;
+
+        public LineRemovalEditor(PdfTextLine line) : this([line], new CaptureListener())
         {
         }
 
-        private LineRemovalEditor(PdfTextLine line, CaptureListener listener) : base(listener)
+        public LineRemovalEditor(IReadOnlyList<PdfTextLine> lines) : this(lines, new CaptureListener())
         {
-            _line = line;
+        }
+
+        private LineRemovalEditor(IReadOnlyList<PdfTextLine> lines, CaptureListener listener) : base(listener)
+        {
+            _lines = lines;
             _listener = listener;
         }
 
@@ -286,9 +364,11 @@ public static class PdfTextReplacer
             if (_xobjectDepth > 0)
                 return;
 
-            if (isShowText && _listener.Pending.Any(MatchesLine))
+            if (isShowText && FindMatchedLine() is { } matchedLine)
             {
                 RemovedCount++;
+                _removedPerLine[matchedLine] =
+                    (_removedPerLine.TryGetValue(matchedLine, out var count) ? count : 0) + 1;
                 // Preserva gli effetti collaterali di ' e " sul cursore di testo.
                 if (op == "'")
                 {
@@ -313,10 +393,20 @@ public static class PdfTextReplacer
             WriteOperands(operands);
         }
 
-        private bool MatchesLine((double X, double Y) start) =>
-            Math.Abs(start.Y - _line.BaselineY) <= 2.5 &&
-            start.X >= _line.Left - 2 &&
-            start.X <= _line.Left + _line.Width + 2;
+        private PdfTextLine? FindMatchedLine()
+        {
+            foreach (var start in _listener.Pending)
+            {
+                foreach (var line in _lines)
+                {
+                    if (Math.Abs(start.Y - line.BaselineY) <= 2.5 &&
+                        start.X >= line.Left - 2 &&
+                        start.X <= line.Left + line.Width + 2)
+                        return line;
+                }
+            }
+            return null;
+        }
 
         private void WriteOperands(IList<PdfObject> operands)
         {

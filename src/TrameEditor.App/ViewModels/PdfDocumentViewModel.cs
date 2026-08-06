@@ -748,6 +748,77 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
     }
 
+    // ----- Anonimizzazione (M8) -----
+
+    [RelayCommand]
+    private async Task RedactAsync()
+    {
+        IReadOnlyList<SensitiveMatch> matches;
+        try
+        {
+            IsSearching = true;
+            var working = _workingPath;
+            matches = await Task.Run(() => PdfRedactionService.Scan(working));
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Analisi non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+
+        if (matches.Count == 0)
+        {
+            ShowInfo("Nessun dato sensibile riconosciuto " +
+                "(codici fiscali, IBAN, email, telefoni, targhe).\n" +
+                "Nota: le scansioni senza OCR non sono analizzabili.");
+            return;
+        }
+
+        var choice = RedactionDialog.Show(matches);
+        if (choice is null)
+            return;
+        var (selected, stripMetadata) = choice.Value;
+        if (selected.Count == 0 && !stripMetadata)
+            return;
+
+        try
+        {
+            IsSearching = true;
+            var working = _workingPath;
+            var newWorking = NewTempPath();
+            var result = await Task.Run(() =>
+                PdfRedactionService.Apply(working, newWorking, selected, stripMetadata));
+            SwapWorkingFile(newWorking);
+            IsDirty = true;
+
+            var message = $"Anonimizzazione completata: {result.ItemsRedacted} dati rimossi" +
+                (stripMetadata ? ", metadati ripuliti." : ".") +
+                "\nRicorda di salvare con \"Salva con nome\".";
+            if (result.SkippedLines.Count > 0)
+            {
+                message += $"\n\n⚠ ATTENZIONE: {result.SkippedLines.Count} righe non erano " +
+                    "rimovibili (testo dentro moduli grafici): i dati lì presenti NON sono stati tolti:\n" +
+                    string.Join("\n", result.SkippedLines.Take(5).Select(l => "• " + l.Text));
+            }
+            MessageBox.Show(message, "TrameEditor", MessageBoxButton.OK,
+                result.SkippedLines.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Anonimizzazione non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
     // ----- Stampa e protezione (M7) -----
 
     [RelayCommand]
