@@ -1,10 +1,10 @@
-; Installer TrameEditor — Inno Setup 6
+﻿; Installer TrameEditor - Inno Setup 6
 ; Compilare con: ISCC.exe TrameEditor.iss
 ; Prerequisito: publish self-contained in ..\dist\publish
 ;   dotnet publish src/TrameEditor.App -c Release -r win-x64 --self-contained true -o dist/publish
 
 #define MyAppName "TrameEditor"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "Trame Future srls"
 #define MyAppURL "https://www.tramefuture.com"
 #define MyAppExeName "TrameEditor.exe"

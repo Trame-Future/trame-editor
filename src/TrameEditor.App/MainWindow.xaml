@@ -25,6 +25,16 @@
                                      Command="{Binding NewDocumentCommand}" />
                     <fluent:MenuItem Header="Apri…" InputGestureText="Ctrl+O"
                                      Command="{Binding OpenFileCommand}" />
+                    <fluent:MenuItem Header="Recenti" ItemsSource="{Binding RecentFiles}">
+                        <fluent:MenuItem.ItemContainerStyle>
+                            <Style TargetType="{x:Type fluent:MenuItem}">
+                                <Setter Property="Header" Value="{Binding}" />
+                                <Setter Property="Command"
+                                        Value="{Binding DataContext.OpenRecentCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                <Setter Property="CommandParameter" Value="{Binding}" />
+                            </Style>
+                        </fluent:MenuItem.ItemContainerStyle>
+                    </fluent:MenuItem>
                     <Separator />
                     <fluent:MenuItem Header="Salva" InputGestureText="Ctrl+S"
                                      Command="{Binding SaveCommand}" />
@@ -131,6 +141,27 @@
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
                                        Foreground="{StaticResource AccentBrush}" Text="&#xE8A5;" />
                         </fluent:Button.LargeIcon>
+                    </fluent:Button>
+                    <fluent:Button Header="Immagini in PDF" Size="Middle" Focusable="False"
+                                   ToolTip="Unisce una o più immagini in un PDF"
+                                   Command="{Binding ImagesToPdfCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE91B;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
+                    <fluent:Button Header="Esporta immagini" Size="Middle" Focusable="False"
+                                   ToolTip="Salva ogni pagina del PDF aperto come immagine PNG"
+                                   Command="{Binding SelectedDocument.ExportImagesCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE78A;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
+                    <fluent:Button Header="Esporta testo" Size="Middle" Focusable="False"
+                                   ToolTip="Estrae il testo del PDF aperto in un file .txt"
+                                   Command="{Binding SelectedDocument.ExportTextCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE8A4;" />
+                        </fluent:Button.Icon>
                     </fluent:Button>
                 </fluent:RibbonGroupBox>
 

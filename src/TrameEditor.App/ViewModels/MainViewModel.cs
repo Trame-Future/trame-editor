@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using TrameEditor.Core.Markdown;
 using TrameEditor.Core.Pdf;
+using TrameEditor.Core.Session;
 
 namespace TrameEditor.App.ViewModels;
 
@@ -19,7 +20,11 @@ public partial class MainViewModel : ObservableObject
     private const string TextSaveFilter =
         "File di testo e Markdown (*.txt;*.md)|*.txt;*.md;*.markdown|Tutti i file (*.*)|*.*";
 
+    private readonly SessionStore _sessionStore = SessionStore.CreateDefault();
+
     public ObservableCollection<DocumentTabViewModel> Documents { get; } = [];
+
+    public ObservableCollection<string> RecentFiles { get; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(WindowTitle))]
@@ -31,7 +36,56 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _showLineNumbers = true;
 
-    public MainViewModel() => NewDocument();
+    public MainViewModel()
+    {
+        foreach (var recent in _sessionStore.Load().RecentFiles)
+            RecentFiles.Add(recent);
+        NewDocument();
+    }
+
+    /// <summary>Riapre i file dell'ultima sessione (chiamato all'avvio senza argomenti).</summary>
+    public void RestoreSession()
+    {
+        foreach (var path in _sessionStore.Load().OpenFiles.Where(File.Exists))
+            OpenPath(path);
+    }
+
+    /// <summary>Salva sessione e recenti (chiamato alla chiusura confermata).</summary>
+    public void SaveSession()
+    {
+        try
+        {
+            _sessionStore.Save(new SessionState
+            {
+                OpenFiles = [.. Documents.Select(d => d.FilePath).OfType<string>()],
+                RecentFiles = [.. RecentFiles],
+            });
+        }
+        catch
+        {
+            // la sessione è un comfort: mai bloccare la chiusura per questo
+        }
+    }
+
+    private void RegisterRecent(string path)
+    {
+        var updated = SessionStore.PushRecent(RecentFiles, Path.GetFullPath(path));
+        RecentFiles.Clear();
+        foreach (var item in updated)
+            RecentFiles.Add(item);
+    }
+
+    [RelayCommand]
+    private void OpenRecent(string path)
+    {
+        if (File.Exists(path))
+            OpenPath(path);
+        else
+        {
+            ShowError($"Il file non esiste più:\n{path}");
+            RecentFiles.Remove(path);
+        }
+    }
 
     public string WindowTitle => SelectedDocument is null
         ? "TrameEditor"
@@ -87,6 +141,7 @@ public partial class MainViewModel : ObservableObject
                 Documents.Remove(blank);
             Documents.Add(document);
             SelectedDocument = document;
+            RegisterRecent(path);
         }
         catch (Exception ex)
         {
@@ -182,6 +237,33 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ImagesToPdf()
+    {
+        var openDialog = new OpenFileDialog
+        {
+            Filter = "Immagini (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp",
+            Multiselect = true,
+            Title = "Scegli le immagini da unire in un PDF (nell'ordine di selezione)",
+        };
+        if (openDialog.ShowDialog() != true || openDialog.FileNames.Length == 0)
+            return;
+
+        var saveDialog = new SaveFileDialog { Filter = "PDF (*.pdf)|*.pdf", FileName = "immagini.pdf" };
+        if (saveDialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            ImagesToPdfConverter.Convert(openDialog.FileNames, saveDialog.FileName);
+            OpenPath(saveDialog.FileName);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Conversione non riuscita:\n{ex.Message}");
+        }
+    }
+
+    [RelayCommand]
     private void MergePdfs()
     {
         var openDialog = new OpenFileDialog
@@ -230,7 +312,10 @@ public partial class MainViewModel : ObservableObject
             FileName = document.FileName,
             DefaultExt = ".txt",
         };
-        return dialog.ShowDialog() == true && TrySaveText(document, dialog.FileName);
+        if (dialog.ShowDialog() != true || !TrySaveText(document, dialog.FileName))
+            return false;
+        RegisterRecent(dialog.FileName);
+        return true;
     }
 
     private static bool TrySaveText(TextDocumentViewModel document, string path)

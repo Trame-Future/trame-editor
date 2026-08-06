@@ -15,14 +15,24 @@ public partial class MainWindow : Fluent.RibbonWindow
         DataContext = _viewModel;
         Loaded += (_, _) =>
         {
-            foreach (var path in Environment.GetCommandLineArgs().Skip(1).Where(File.Exists))
-                _viewModel.OpenPath(path);
+            var args = Environment.GetCommandLineArgs().Skip(1).Where(File.Exists).ToList();
+            if (args.Count > 0)
+            {
+                foreach (var path in args)
+                    _viewModel.OpenPath(path);
+            }
+            else
+            {
+                _viewModel.RestoreSession();
+            }
         };
     }
 
     protected override void OnClosing(CancelEventArgs e)
     {
         e.Cancel = !_viewModel.ConfirmCloseAll();
+        if (!e.Cancel)
+            _viewModel.SaveSession();
         base.OnClosing(e);
     }
 

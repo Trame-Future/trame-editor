@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -659,6 +661,83 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         finally
         {
             IsSearching = false;
+        }
+    }
+
+    // ----- Conversioni (M6) -----
+
+    /// <summary>Esporta ogni pagina come PNG (render 2x, rotazioni in sospeso applicate).</summary>
+    [RelayCommand]
+    private async Task ExportImagesAsync()
+    {
+        var dialog = new OpenFolderDialog { Title = "Scegli la cartella dove salvare le immagini" };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            IsSearching = true;
+            var baseName = Path.GetFileNameWithoutExtension(FileName);
+            var index = 0;
+            foreach (var page in Pages.ToList())
+            {
+                index++;
+                var bitmap = await _renderer.RenderPageAsync(page.OriginalIndex);
+                BitmapSource output = page.RotationDelta != 0
+                    ? new TransformedBitmap(bitmap, new RotateTransform(page.RotationDelta))
+                    : bitmap;
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(output));
+                var filePath = Path.Combine(dialog.FolderName, $"{baseName}-pag{index:D3}.png");
+                using var stream = File.Create(filePath);
+                encoder.Save(stream);
+            }
+            ShowInfo($"{index} immagini PNG salvate in \"{dialog.FolderName}\".");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Export immagini non riuscito:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
+    /// <summary>Esporta il testo del PDF (righe estratte con PdfPig) in un file .txt.</summary>
+    [RelayCommand]
+    private async Task ExportTextAsync()
+    {
+        var dialog = new SaveFileDialog
+        {
+            Filter = "File di testo (*.txt)|*.txt",
+            FileName = Path.ChangeExtension(FileName, ".txt"),
+        };
+        if (dialog.ShowDialog() != true || !EnsureInspector())
+            return;
+
+        try
+        {
+            var inspector = _inspector!;
+            var pages = Pages.Select(p => p.OriginalIndex + 1).ToList();
+            await Task.Run(() =>
+            {
+                var builder = new System.Text.StringBuilder();
+                foreach (var pageNumber in pages)
+                {
+                    foreach (var line in inspector.GetLines(pageNumber))
+                        builder.AppendLine(line.Text);
+                    builder.AppendLine();
+                }
+                File.WriteAllText(dialog.FileName, builder.ToString());
+            });
+            ShowInfo($"Testo esportato in \"{Path.GetFileName(dialog.FileName)}\".");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Export testo non riuscito:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
