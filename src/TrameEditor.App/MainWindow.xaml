@@ -10,6 +10,9 @@
         Background="{StaticResource ChromeBrush}"
         UseLayoutRounding="True"
         AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver">
+    <fluent:RibbonWindow.CommandBindings>
+        <CommandBinding Command="Help" Executed="Help_Executed" />
+    </fluent:RibbonWindow.CommandBindings>
     <fluent:RibbonWindow.InputBindings>
         <KeyBinding Modifiers="Control" Key="N" Command="{Binding NewDocumentCommand}" />
         <KeyBinding Modifiers="Control" Key="O" Command="{Binding OpenFileCommand}" />
@@ -53,6 +56,7 @@
                     <Separator />
                     <fluent:MenuItem Header="Chiudi scheda" InputGestureText="Ctrl+W"
                                      Command="{Binding CloseActiveDocumentCommand}" />
+                    <fluent:MenuItem Header="Guida" InputGestureText="F1" Command="Help" />
                     <fluent:MenuItem Header="Informazioni su TrameEditor…" Click="About_Click" />
                     <fluent:MenuItem Header="Esci" Click="Exit_Click" />
                 </fluent:ApplicationMenu>
@@ -183,6 +187,13 @@
                 </fluent:RibbonGroupBox>
 
                 <fluent:RibbonGroupBox Header="Informazioni">
+                    <fluent:Button Header="Guida" Focusable="False"
+                                   ToolTip="Apri la guida di TrameEditor (F1)" Command="Help">
+                        <fluent:Button.LargeIcon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
+                                       Foreground="{StaticResource AccentBrush}" Text="&#xE897;" />
+                        </fluent:Button.LargeIcon>
+                    </fluent:Button>
                     <fluent:Button Header="Trame Future" Focusable="False"
                                    ToolTip="Informazioni su TrameEditor" Click="About_Click">
                         <fluent:Button.LargeIcon>
