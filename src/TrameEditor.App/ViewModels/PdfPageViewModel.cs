@@ -38,6 +38,9 @@ public partial class PdfPageViewModel : ObservableObject
     /// <summary>Righe di testo cliccabili in modalità "Modifica testo".</summary>
     public ObservableCollection<PdfTextRegionViewModel> EditRegions { get; } = [];
 
+    /// <summary>Rettangoli gialli dei risultati di ricerca sulla pagina.</summary>
+    public ObservableCollection<PdfTextRegionViewModel> SearchHighlights { get; } = [];
+
     public PdfPageViewModel(PdfRenderService renderer, int originalIndex)
     {
         _renderer = renderer;

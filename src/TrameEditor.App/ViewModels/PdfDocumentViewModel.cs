@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using TrameEditor.App.Services;
+using TrameEditor.Core.Ocr;
 using TrameEditor.Core.Pdf;
 
 namespace TrameEditor.App.ViewModels;
@@ -57,6 +58,17 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
 
     /// <summary>Le regioni cliccabili servono sia alla modifica testo sia all'evidenziazione.</summary>
     public bool ShowRegions => EditMode || AnnotationTool == PdfAnnotationTool.Highlight;
+
+    [ObservableProperty]
+    private bool _formMode;
+
+    public ObservableCollection<PdfFormFieldViewModel> FormFields { get; } = [];
+
+    [ObservableProperty]
+    private bool _flattenOnApply;
+
+    [ObservableProperty]
+    private string _formStatus = string.Empty;
 
     [ObservableProperty]
     private PdfTextRegionViewModel? _activeRegion;
@@ -205,25 +217,33 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
     }
 
+    /// <summary>Ricerca basata sulle righe (PdfPig): ogni risultato ha anche il
+    /// rettangolo da evidenziare sulla pagina.</summary>
     [RelayCommand]
     private async Task SearchAsync()
     {
-        SearchMatches.Clear();
+        ClearSearch();
         var query = SearchQuery.Trim();
-        if (query.Length < 2 || IsSearching)
+        if (query.Length < 2 || IsSearching || !EnsureInspector())
             return;
 
         IsSearching = true;
         try
         {
+            var inspector = _inspector!;
             foreach (var page in Pages.ToList())
             {
-                var text = await _renderer.GetPageTextAsync(page.OriginalIndex);
-                var start = 0;
-                while ((start = text.IndexOf(query, start, StringComparison.OrdinalIgnoreCase)) >= 0)
+                if (page.RotationDelta != 0)
+                    continue; // il rettangolo non sarebbe allineato alla rotazione in sospeso
+                var pageNumber = page.OriginalIndex + 1;
+                var (lines, size) = await Task.Run(() =>
+                    (inspector.GetLines(pageNumber), inspector.GetPageSize(pageNumber)));
+                foreach (var line in lines)
                 {
-                    SearchMatches.Add(new PdfSearchMatch(page, Snippet(text, start, query.Length)));
-                    start += query.Length;
+                    if (!line.Text.Contains(query, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    SearchMatches.Add(new PdfSearchMatch(page, TrimSnippet(line.Text)));
+                    page.SearchHighlights.Add(new PdfTextRegionViewModel(line, size.Height));
                     if (SearchMatches.Count >= 500)
                         return;
                 }
@@ -235,14 +255,16 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
     }
 
-    private static string Snippet(string text, int matchStart, int matchLength)
+    private void ClearSearch()
     {
-        const int context = 28;
-        var from = Math.Max(0, matchStart - context);
-        var to = Math.Min(text.Length, matchStart + matchLength + context);
-        var snippet = text[from..to].ReplaceLineEndings(" ").Trim();
-        return (from > 0 ? "…" : "") + snippet + (to < text.Length ? "…" : "");
+        SearchMatches.Clear();
+        SelectedMatch = null;
+        foreach (var page in Pages)
+            page.SearchHighlights.Clear();
     }
+
+    private static string TrimSnippet(string text) =>
+        text.Length <= 70 ? text : text[..70] + "…";
 
     // ----- Modalità "Modifica testo" (M3) -----
 
@@ -299,18 +321,25 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         OnPropertyChanged(nameof(ShowRegions));
     }
 
-    /// <summary>Prepara l'ispettore del testo e avvia il caricamento delle regioni.</summary>
-    private bool EnsureRegionsLoaded()
+    private bool EnsureInspector()
     {
         try
         {
             _inspector ??= new PdfTextInspector(_workingPath);
+            return true;
         }
         catch (Exception ex)
         {
             ShowInfo($"Impossibile analizzare il testo del PDF:\n{ex.Message}");
             return false;
         }
+    }
+
+    /// <summary>Prepara l'ispettore del testo e avvia il caricamento delle regioni.</summary>
+    private bool EnsureRegionsLoaded()
+    {
+        if (!EnsureInspector())
+            return false;
         _ = LoadAllRegionsAsync();
         return true;
     }
@@ -455,6 +484,8 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             _inspector = new PdfTextInspector(newWorkingPath);
             _ = LoadAllRegionsAsync();
         }
+        if (FormMode)
+            _ = LoadFormFieldsAsync();
     }
 
     // ----- Annotazioni (M4): evidenzia, nota, timbro immagine -----
@@ -499,6 +530,148 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
                     PdfAnnotationService.StampImage(source, target, pageNumber, pdfX, pdfY, imagePath, 120));
                 break;
         }
+    }
+
+    // ----- Modulo AcroForm (M5) -----
+
+    partial void OnFormModeChanged(bool value)
+    {
+        if (value)
+            _ = LoadFormFieldsAsync();
+    }
+
+    private async Task LoadFormFieldsAsync()
+    {
+        FormFields.Clear();
+        FormStatus = "lettura del modulo…";
+        try
+        {
+            var fields = await Task.Run(() => PdfFormService.GetFields(_workingPath));
+            foreach (var field in fields)
+                FormFields.Add(new PdfFormFieldViewModel(field));
+            FormStatus = fields.Count == 0
+                ? "Questo PDF non contiene campi modulo compilabili."
+                : $"{fields.Count} campi trovati. Compila e premi \"Applica al PDF\".";
+        }
+        catch (Exception ex)
+        {
+            FormStatus = $"Modulo non leggibile: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ApplyFormAsync()
+    {
+        if (FormFields.Count == 0)
+            return;
+        var values = FormFields.ToDictionary(f => f.Name, f => f.ResultValue);
+        var flatten = FlattenOnApply;
+        await ApplyPdfOperationAsync((source, target) =>
+            PdfFormService.Fill(source, target, values, flatten));
+        if (FormMode)
+            await LoadFormFieldsAsync();
+    }
+
+    // ----- OCR (M5) -----
+
+    [RelayCommand]
+    private async Task RunOcrAsync()
+    {
+        var answer = MessageBox.Show(
+            "Le pagine senza layer di testo (scansioni) verranno riconosciute con OCR " +
+            "(italiano + inglese, tutto offline) e riceveranno un layer di testo invisibile: " +
+            "il PDF diventerà ricercabile senza cambiare aspetto.\n\nProcedere?",
+            "TrameEditor", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (answer != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            IsSearching = true;
+            var newWorking = NewTempPath();
+            var renderer = _renderer;
+            var working = _workingPath;
+            var result = await Task.Run(() => PdfOcrService.MakeSearchable(
+                working, newWorking, TessdataPath(),
+                pageNumber => renderer.RenderPagePngForOcr(pageNumber - 1),
+                PdfRenderService.OcrScale));
+
+            if (result.PagesProcessed == 0)
+            {
+                ShowInfo("Tutte le pagine hanno già un layer di testo: niente da riconoscere.");
+                return;
+            }
+            SwapWorkingFile(newWorking);
+            IsDirty = true;
+            ShowInfo($"OCR completato: {result.PagesProcessed} pagine riconosciute, " +
+                $"{result.WordsFound} parole. Ora il testo è ricercabile.");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"OCR non riuscito:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
+    private static string TessdataPath() =>
+        Path.Combine(AppContext.BaseDirectory, "tessdata");
+
+    // ----- Compressione (M5) -----
+
+    [RelayCommand]
+    private async Task CompressAsync()
+    {
+        var dialog = new SaveFileDialog
+        {
+            Filter = PdfFilter,
+            FileName = Path.GetFileNameWithoutExtension(FileName) + " - compresso.pdf",
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            IsSearching = true;
+            var staged = NewTempPath();
+            var pages = Pages.Select(p => new PdfPageEdit(p.OriginalIndex, p.RotationDelta)).ToList();
+            var working = _workingPath;
+            var target = dialog.FileName;
+            var result = await Task.Run(() =>
+            {
+                PdfPageOperations.Build(working, pages, staged);
+                return PdfCompressor.Compress(staged, target);
+            });
+            var detail = result.ImagesRecompressed == 0
+                ? "nessuna immagine ricomprimibile: ridotta solo la struttura"
+                : $"{result.ImagesRecompressed} immagini ricompresse";
+            ShowInfo($"PDF salvato: da {result.BeforeBytes / 1048576.0:F2} MB " +
+                $"a {result.AfterBytes / 1048576.0:F2} MB ({detail}).");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Compressione non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
+    // ----- Riordino con drag & drop delle miniature (M5) -----
+
+    public void MovePage(PdfPageViewModel source, PdfPageViewModel? target)
+    {
+        var from = Pages.IndexOf(source);
+        var to = target is null ? Pages.Count - 1 : Pages.IndexOf(target);
+        if (from < 0 || to < 0 || from == to)
+            return;
+        Pages.Move(from, to);
+        IsDirty = true;
     }
 
     /// <summary>Applica un'operazione PDF alla working copy e ricarica il documento.</summary>

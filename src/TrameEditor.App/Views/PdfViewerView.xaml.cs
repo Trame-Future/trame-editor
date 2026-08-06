@@ -30,6 +30,41 @@ public partial class PdfViewerView : UserControl
             PageList.ScrollIntoView(e.AddedItems[0]);
     }
 
+    // ----- Riordino pagine con drag & drop delle miniature -----
+
+    private System.Windows.Point _dragStart;
+    private PdfPageViewModel? _dragPage;
+
+    private void ThumbList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStart = e.GetPosition(null);
+        _dragPage = (e.OriginalSource as FrameworkElement)?.DataContext as PdfPageViewModel;
+    }
+
+    private void ThumbList_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _dragPage is null)
+            return;
+        var delta = e.GetPosition(null) - _dragStart;
+        if (Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        var page = _dragPage;
+        _dragPage = null;
+        DragDrop.DoDragDrop(ThumbList, page, DragDropEffects.Move);
+    }
+
+    private void ThumbList_Drop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetData(typeof(PdfPageViewModel)) is not PdfPageViewModel dropped ||
+            DataContext is not PdfDocumentViewModel vm)
+            return;
+        var target = (e.OriginalSource as FrameworkElement)?.DataContext as PdfPageViewModel;
+        vm.MovePage(dropped, target);
+        e.Handled = true;
+    }
+
     private void Matches_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (e.AddedItems is [PdfSearchMatch match, ..])

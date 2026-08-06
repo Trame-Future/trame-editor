@@ -17,21 +17,51 @@ public sealed class PdfRenderService : IDisposable
 {
     /// <summary>Pagine renderizzate a 2x: nitide fino al 200% di zoom senza ri-render.</summary>
     public const double FullScale = 2.0;
+
+    /// <summary>Scala di render per l'OCR (~216 dpi): pixel per punto PDF.</summary>
+    public const double OcrScale = 3.0;
+
     private const double ThumbScale = 0.25;
 
+    private readonly byte[] _fileBytes;
     private readonly IDocReader _fullReader;
     private readonly IDocReader _thumbReader;
-    private readonly SemaphoreSlim _gate = new(1, 1);
+    private IDocReader? _ocrReader;
+
+    // PDFium non è thread-safe a livello di processo: il semaforo è condiviso
+    // tra tutte le istanze (viewer, miniature, OCR).
+    private static readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<int, string> _textCache = [];
 
     public int PageCount { get; }
 
     public PdfRenderService(string path)
     {
-        var bytes = File.ReadAllBytes(path);
-        _fullReader = DocLib.Instance.GetDocReader(bytes, new PageDimensions(FullScale));
-        _thumbReader = DocLib.Instance.GetDocReader(bytes, new PageDimensions(ThumbScale));
+        _fileBytes = File.ReadAllBytes(path);
+        _fullReader = DocLib.Instance.GetDocReader(_fileBytes, new PageDimensions(FullScale));
+        _thumbReader = DocLib.Instance.GetDocReader(_fileBytes, new PageDimensions(ThumbScale));
         PageCount = _fullReader.GetPageCount();
+    }
+
+    /// <summary>Render sincrono ad alta risoluzione per l'OCR, come PNG.
+    /// Da chiamare fuori dal thread UI.</summary>
+    public byte[] RenderPagePngForOcr(int pageIndex)
+    {
+        _gate.Wait();
+        try
+        {
+            _ocrReader ??= DocLib.Instance.GetDocReader(_fileBytes, new PageDimensions(OcrScale));
+            var bitmap = Render(_ocrReader, pageIndex);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using var stream = new MemoryStream();
+            encoder.Save(stream);
+            return stream.ToArray();
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     public Task<BitmapSource> RenderPageAsync(int pageIndex) => RunLocked(() => Render(_fullReader, pageIndex));
@@ -76,6 +106,6 @@ public sealed class PdfRenderService : IDisposable
     {
         _fullReader.Dispose();
         _thumbReader.Dispose();
-        _gate.Dispose();
+        _ocrReader?.Dispose();
     }
 }

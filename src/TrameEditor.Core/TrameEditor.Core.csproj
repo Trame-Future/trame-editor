@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -15,7 +15,9 @@
     <PackageReference Include="PDFsharp" Version="6.2.4" />
     <!-- NU1510 è un falso positivo: il framework espone il tipo ma senza i dati
          della codepage 1252, servono quelli del pacchetto (vedi test ANSI). -->
+    <PackageReference Include="System.Drawing.Common" Version="10.0.10" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.10" NoWarn="NU1510" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
   </ItemGroup>
 
 </Project>

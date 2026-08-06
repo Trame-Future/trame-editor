@@ -24,7 +24,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>TrameEditor</AssemblyName>
     <ApplicationIcon>Assets\trameeditor.ico</ApplicationIcon>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Product>TrameEditor</Product>
     <Company>Trame Future srls</Company>
   </PropertyGroup>
@@ -32,6 +32,12 @@
   <ItemGroup>
     <Resource Include="Assets\logo-tramefuture.png" />
     <Resource Include="Assets\icon-256.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Dati lingua Tesseract per l'OCR offline (ita+eng, modelli fast) -->
+    <None Include="..\..\tessdata\*.traineddata" Link="tessdata\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

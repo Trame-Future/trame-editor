@@ -37,6 +37,24 @@
                             <TextBlock Style="{StaticResource TbLabel}" Text="Timbro" />
                         </StackPanel>
                     </ToggleButton>
+                    <ToggleButton Style="{StaticResource TbToggle}" IsChecked="{Binding FormMode}"
+                                  ToolTip="Modulo: compila i campi del PDF (AcroForm)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource TbIcon}" Text="&#xE762;" />
+                            <TextBlock Style="{StaticResource TbLabel}" Text="Modulo" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding RunOcrCommand}"
+                            ToolTip="Riconosce il testo delle pagine scansionate (OCR offline ita+eng)">
+                        <TextBlock FontWeight="SemiBold" VerticalAlignment="Center" Text="OCR" />
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding CompressCommand}"
+                            ToolTip="Salva una copia compressa del PDF (ricomprime le immagini)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource TbIcon}" Text="&#xE73F;" />
+                            <TextBlock Style="{StaticResource TbLabel}" Text="Comprimi…" />
+                        </StackPanel>
+                    </Button>
                     <Rectangle Style="{StaticResource TbSeparator}" />
                     <Button Style="{StaticResource TbButton}" ToolTip="Ruota a sinistra le pagine selezionate"
                             Command="{Binding RotateLeftCommand}">
@@ -132,12 +150,17 @@
                 <ColumnDefinition Width="170" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <!-- Miniature: qui si selezionano le pagine per le operazioni -->
             <ListBox x:Name="ThumbList" ItemsSource="{Binding Pages}"
                      SelectionMode="Extended" SelectionChanged="ThumbList_SelectionChanged"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     AllowDrop="True"
+                     PreviewMouseLeftButtonDown="ThumbList_PreviewMouseLeftButtonDown"
+                     PreviewMouseMove="ThumbList_PreviewMouseMove"
+                     Drop="ThumbList_Drop"
                      Background="#F3F3F3" BorderThickness="0,0,1,0" BorderBrush="#DDDDDD">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
@@ -260,6 +283,56 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                                <!-- Evidenziazione dei risultati di ricerca -->
+                                <ItemsControl ItemsSource="{Binding SearchHighlights}" IsHitTestVisible="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left">
+                                                <Setter.Value>
+                                                    <MultiBinding Converter="{StaticResource Multiply}">
+                                                        <Binding Path="X" />
+                                                        <Binding Path="DataContext.Zoom"
+                                                                 RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                    </MultiBinding>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Setter Property="Canvas.Top">
+                                                <Setter.Value>
+                                                    <MultiBinding Converter="{StaticResource Multiply}">
+                                                        <Binding Path="Y" />
+                                                        <Binding Path="DataContext.Zoom"
+                                                                 RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                    </MultiBinding>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:PdfTextRegionViewModel}">
+                                            <Rectangle Fill="#55FFD400" Stroke="#AAE0A800" StrokeThickness="1">
+                                                <Rectangle.Width>
+                                                    <MultiBinding Converter="{StaticResource Multiply}">
+                                                        <Binding Path="Width" />
+                                                        <Binding Path="DataContext.Zoom"
+                                                                 RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                    </MultiBinding>
+                                                </Rectangle.Width>
+                                                <Rectangle.Height>
+                                                    <MultiBinding Converter="{StaticResource Multiply}">
+                                                        <Binding Path="Height" />
+                                                        <Binding Path="DataContext.Zoom"
+                                                                 RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                    </MultiBinding>
+                                                </Rectangle.Height>
+                                            </Rectangle>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </Grid>
                         </Border>
                     </DataTemplate>
@@ -287,6 +360,45 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+
+            <!-- Pannello Modulo (AcroForm) -->
+            <Border Grid.Column="3" Width="290" Background="White"
+                    BorderThickness="1,0,0,0" BorderBrush="#DDDDDD"
+                    Visibility="{Binding FormMode, Converter={StaticResource BoolToVisibility}}">
+                <DockPanel Margin="10,8">
+                    <TextBlock DockPanel.Dock="Top" Text="Modulo PDF" FontWeight="Bold" FontSize="14"
+                               Foreground="{StaticResource AccentBrush}" Margin="0,0,0,4" />
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding FormStatus}" TextWrapping="Wrap"
+                               FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,8" />
+                    <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <CheckBox Content="Appiattisci (blocca il modulo)" FontSize="12"
+                                  IsChecked="{Binding FlattenOnApply}"
+                                  ToolTip="I valori diventano contenuto fisso: il modulo non sarà più compilabile" />
+                        <Button Margin="0,8,0,0" Padding="0,6" FontWeight="Bold"
+                                Content="Applica al PDF" Command="{Binding ApplyFormCommand}" />
+                    </StackPanel>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding FormFields}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:PdfFormFieldViewModel}">
+                                    <StackPanel Margin="0,0,4,10">
+                                        <TextBlock Text="{Binding Name}" FontSize="11"
+                                                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,2" />
+                                        <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="3,2"
+                                                 Visibility="{Binding IsText, Converter={StaticResource BoolToVisibility}}" />
+                                        <CheckBox IsChecked="{Binding IsChecked}"
+                                                  Visibility="{Binding IsCheckbox, Converter={StaticResource BoolToVisibility}}" />
+                                        <ComboBox ItemsSource="{Binding Options}"
+                                                  SelectedItem="{Binding Value}"
+                                                  Visibility="{Binding IsChoice, Converter={StaticResource BoolToVisibility}}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
         </Grid>
     </DockPanel>
 </UserControl>
