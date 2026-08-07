@@ -44,8 +44,8 @@ public class BatchProcessorTests : IDisposable
         Assert.True(PdfCryptoService.IsPasswordProtected(result.OutputPath!));
         var decrypted = Path.Combine(_dir, "check.pdf");
         PdfCryptoService.Decrypt(result.OutputPath!, decrypted, "batch123");
-        Assert.Empty(PdfRedactionService.Scan(decrypted)
-            .Where(m => m.Kind is SensitiveKind.CodiceFiscale or SensitiveKind.Email));
+        Assert.DoesNotContain(PdfRedactionService.Scan(decrypted),
+            m => m.Kind is SensitiveKind.CodiceFiscale or SensitiveKind.Email);
 
         // l'originale è intatto
         Assert.NotEmpty(PdfRedactionService.Scan(source));
