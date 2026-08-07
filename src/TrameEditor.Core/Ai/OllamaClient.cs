@@ -37,7 +37,13 @@ public sealed class OllamaClient
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(60));
-        var payload = JsonSerializer.Serialize(new { model, prompt = text });
+        // JSON costruito esplicitamente: niente serializzazione per riflessione
+        // (funziona anche in contesti trimmed/AOT)
+        var payload = new System.Text.Json.Nodes.JsonObject
+        {
+            ["model"] = model,
+            ["prompt"] = text,
+        }.ToJsonString();
         using var response = await Http.PostAsync($"{_baseUrl}/api/embeddings",
             new StringContent(payload, Encoding.UTF8, "application/json"), timeout.Token);
         response.EnsureSuccessStatusCode();
@@ -51,17 +57,17 @@ public sealed class OllamaClient
         string systemPrompt, string userPrompt,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var payload = JsonSerializer.Serialize(new
+        var payload = new System.Text.Json.Nodes.JsonObject
         {
-            model,
-            stream = true,
-            options = new { temperature = 0.1 },
-            messages = new object[]
+            ["model"] = model,
+            ["stream"] = true,
+            ["options"] = new System.Text.Json.Nodes.JsonObject { ["temperature"] = 0.1 },
+            ["messages"] = new System.Text.Json.Nodes.JsonArray
             {
-                new { role = "system", content = systemPrompt },
-                new { role = "user", content = userPrompt },
+                new System.Text.Json.Nodes.JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new System.Text.Json.Nodes.JsonObject { ["role"] = "user", ["content"] = userPrompt },
             },
-        });
+        }.ToJsonString();
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/chat")
         {
             Content = new StringContent(payload, Encoding.UTF8, "application/json"),
