@@ -45,6 +45,9 @@ public partial class MainWindow : Fluent.RibbonWindow
     private void Help_Executed(object sender, System.Windows.Input.ExecutedRoutedEventArgs e) =>
         new HelpWindow { Owner = this }.Show();
 
+    private void Profile_Click(object sender, RoutedEventArgs e) =>
+        ProfileWindow.ShowEditor();
+
     private void Window_DragOver(object sender, DragEventArgs e)
     {
         e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)

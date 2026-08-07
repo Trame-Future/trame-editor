@@ -70,6 +70,18 @@ Seleziona le pagine dalle miniature, poi:
 - Pulsante **OCR**: le pagine scansionate vengono riconosciute (italiano + inglese, tutto **offline**) e ricevono un layer di testo invisibile.
 - Dopo l'OCR il documento diventa **ricercabile** e il testo riconosciuto si può perfino modificare.
 
+## PDF — Compila per me ⚡
+
+Nel pannello **Modulo** il pulsante **"⚡ Compila per me"** riempie i campi al posto tuo:
+
+1. La prima volta compili la scheda **"I miei dati"** (ribbon → Strumenti): nome, codice
+   fiscale, indirizzo, IBAN, contatti… Solo i campi che vuoi.
+2. I dati restano **solo sul tuo computer**, cifrati con la protezione dell'account Windows —
+   niente cloud, niente password da ricordare.
+3. Apri un modulo, premi il pulsante: i campi riconosciuti dall'etichetta ("Codice fiscale",
+   "Comune di residenza"…) si riempiono da soli. **I campi già compilati non vengono mai toccati.**
+4. Controlli, correggi se serve, e premi "Applica al PDF".
+
 ## PDF — Anonimizza 🛡
 
 Il pulsante **Anonimizza…** trova automaticamente i dati personali nel documento:

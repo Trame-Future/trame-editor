@@ -177,6 +177,13 @@
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE8A4;" />
                         </fluent:Button.Icon>
                     </fluent:Button>
+                    <fluent:Button Header="I miei dati" Size="Middle" Focusable="False"
+                                   ToolTip="I tuoi dati per la compilazione automatica dei moduli (cifrati sul PC)"
+                                   Click="Profile_Click">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE77B;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
                     <fluent:Button Header="Proteggi PDF" Size="Middle" Focusable="False"
                                    ToolTip="Salva una copia del PDF protetta da password (AES-256)"
                                    Command="{Binding SelectedDocument.ProtectCommand}">

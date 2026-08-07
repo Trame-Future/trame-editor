@@ -568,6 +568,47 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
     }
 
+    /// <summary>"Compila per me": riempie i campi del modulo con i dati del
+    /// profilo locale cifrato, abbinandoli per etichetta. Riempie solo i campi
+    /// vuoti; l'utente rivede e conferma con "Applica al PDF".</summary>
+    [RelayCommand]
+    private void AutoFillForm()
+    {
+        if (FormFields.Count == 0)
+        {
+            ShowInfo("Questo PDF non contiene campi modulo compilabili.");
+            return;
+        }
+
+        var vault = TrameEditor.Core.Profile.PersonalDataVault.CreateDefault();
+        var profile = vault.Load();
+        if (profile.Count == 0 || profile.Values.All(string.IsNullOrWhiteSpace))
+        {
+            if (!ProfileWindow.ShowEditor())
+                return;
+            profile = vault.Load();
+            if (profile.Count == 0)
+                return;
+        }
+
+        var proposals = TrameEditor.Core.Profile.FormAutoFiller.Match(
+            FormFields.Where(f => f.IsText).Select(f => f.Name), profile);
+
+        var filled = 0;
+        foreach (var proposal in proposals)
+        {
+            var field = FormFields.FirstOrDefault(f => f.Name == proposal.FieldName);
+            if (field is null || !string.IsNullOrWhiteSpace(field.Value))
+                continue; // mai sovrascrivere quello che c'è già
+            field.Value = proposal.Value;
+            filled++;
+        }
+
+        FormStatus = filled == 0
+            ? "Nessun campo abbinabile ai dati del profilo (o già compilati)."
+            : $"Compilati {filled} campi dal profilo. Controlla i valori e premi \"Applica al PDF\".";
+    }
+
     [RelayCommand]
     private async Task ApplyFormAsync()
     {

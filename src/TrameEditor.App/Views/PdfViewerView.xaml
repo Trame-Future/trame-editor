@@ -378,6 +378,14 @@
                     <TextBlock DockPanel.Dock="Top" Text="{Binding FormStatus}" TextWrapping="Wrap"
                                FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,8" />
                     <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <Button Padding="0,6" Margin="0,0,0,8"
+                                Command="{Binding AutoFillFormCommand}"
+                                ToolTip="Riempie i campi con i tuoi dati salvati (cifrati sul PC)">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock FontFamily="Segoe UI Emoji" FontSize="12" Text="⚡" />
+                                <TextBlock Margin="5,0,0,0" Text="Compila per me" />
+                            </StackPanel>
+                        </Button>
                         <CheckBox Content="Appiattisci (blocca il modulo)" FontSize="12"
                                   IsChecked="{Binding FlattenOnApply}"
                                   ToolTip="I valori diventano contenuto fisso: il modulo non sarà più compilabile" />
