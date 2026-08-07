@@ -831,8 +831,9 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         QaBusy = true;
         try
         {
-            QaStatus = "cerco Ollama sul computer…";
-            var client = new OllamaClient();
+            var endpoint = TrameEditor.Core.Session.AppSettings.Load().OllamaEndpoint;
+            QaStatus = $"cerco Ollama su {endpoint}…";
+            var client = new OllamaClient(endpoint);
             IReadOnlyList<string> models;
             try
             {
@@ -841,9 +842,10 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             catch
             {
                 QaUnavailable = true;
-                QaStatus = "Ollama non trovato. È il motore gratuito che fa girare l'AI " +
+                QaStatus = $"Ollama non trovato su {endpoint}. È il motore gratuito che fa girare l'AI " +
                     "sul tuo computer: installalo da ollama.com, poi apri il terminale e scrivi:\n\n" +
-                    "ollama pull qwen2.5:3b\n\nInfine premi Riprova.";
+                    "ollama pull qwen2.5:3b\n\nSe Ollama usa un'altra porta, imposta \"OllamaEndpoint\" " +
+                    "nel file %APPDATA%\\TrameEditor\\impostazioni.json.\n\nInfine premi Riprova.";
                 return;
             }
 
@@ -857,7 +859,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             }
 
             var progress = new Progress<string>(s => QaStatus = s);
-            var session = new QaSession(new OllamaClient(), chatModel,
+            var session = new QaSession(new OllamaClient(endpoint), chatModel,
                 OllamaModels.PickEmbeddingModel(models));
             var working = _workingPath;
             await Task.Run(() => session.InitializeAsync(working, progress));

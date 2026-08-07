@@ -4,7 +4,7 @@
 ;   dotnet publish src/TrameEditor.App -c Release -r win-x64 --self-contained true -o dist/publish
 
 #define MyAppName "TrameEditor"
-#define MyAppVersion "2.0.1"
+#define MyAppVersion "2.0.2"
 #define MyAppPublisher "Trame Future srls"
 #define MyAppURL "https://www.tramefuture.com"
 #define MyAppExeName "TrameEditor.exe"

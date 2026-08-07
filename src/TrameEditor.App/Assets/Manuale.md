@@ -107,10 +107,35 @@ Le scansioni vanno prima passate con l'**OCR**.
 
 Il pulsante **"💬 Chiedi"** apre un assistente che risponde a domande sul PDF aperto:
 *"quanto devo pagare e entro quando?"*, *"qual è la durata del contratto?"*…
+L'AI gira **interamente sul tuo computer**: nessun documento viene caricato da nessuna parte.
 
-- L'AI gira **interamente sul tuo computer** grazie a **Ollama** (gratuito): se non
-  è installato, il pannello ti guida — scarica da [ollama.com](https://ollama.com),
-  poi nel terminale: `ollama pull qwen2.5:3b`.
+**Cosa serve (questa è l'unica funzione con dei requisiti):**
+
+- **Ollama**, il motore gratuito per l'AI locale, più un modello (~2 GB su disco).
+  Installazione: scarica da [ollama.com](https://ollama.com), poi nel terminale:
+  `ollama pull qwen2.5:3b` — oppure, se usi Docker:
+  `docker run -d --name ollama --restart unless-stopped -p 11434:11434 -v ollama:/root/.ollama ollama/ollama`
+  e poi `docker exec ollama ollama pull qwen2.5:3b`.
+- **Un PC ben dotato**: almeno **8 GB di RAM** (16 consigliati) e un processore recente.
+  Senza scheda video dedicata funziona, ma le risposte possono richiedere **decine di
+  secondi**; con una GPU NVIDIA sono molto più rapide. Su PC modesti conviene
+  semplicemente non usare questa funzione: tutto il resto dell'app ne è indipendente.
+- Facoltativo: `ollama pull nomic-embed-text` migliora la ricerca del contesto
+  nei documenti lunghi.
+
+**Configurazione: di norma nessuna.** L'app cerca Ollama all'indirizzo standard
+(`http://localhost:11434`). Solo se Ollama gira su un'altra porta o su un altro
+computer della rete locale, apri il file **`%APPDATA%\TrameEditor\impostazioni.json`**
+(viene creato al primo avvio) e cambia la riga:
+
+```json
+{ "OllamaEndpoint": "http://localhost:11434" }
+```
+
+poi riavvia TrameEditor (o premi Riprova nel pannello).
+
+**Come funziona:**
+
 - Ogni risposta indica le **pagine di provenienza**: clicca "pag. N" per andarci.
 - Regole d'onestà: l'assistente usa **solo il contenuto del documento**, e se non
   trova la risposta lo dice. Ma può comunque sbagliare: **verifica sempre sul documento**.
