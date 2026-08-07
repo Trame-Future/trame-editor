@@ -380,6 +380,34 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ComparePdfs()
+    {
+        var first = new OpenFileDialog
+        {
+            Filter = "PDF (*.pdf)|*.pdf",
+            Title = "Scegli il PRIMO documento (la versione vecchia)",
+            FileName = (SelectedDocument as PdfDocumentViewModel)?.FilePath ?? string.Empty,
+        };
+        if (first.ShowDialog() != true)
+            return;
+        var second = new OpenFileDialog
+        {
+            Filter = "PDF (*.pdf)|*.pdf",
+            Title = "Scegli il SECONDO documento (la versione nuova)",
+        };
+        if (second.ShowDialog() != true)
+            return;
+        new CompareWindow(first.FileName, second.FileName)
+        {
+            Owner = Application.Current.MainWindow,
+        }.Show();
+    }
+
+    [RelayCommand]
+    private void OpenBatch() =>
+        new BatchWindow { Owner = Application.Current.MainWindow }.Show();
+
+    [RelayCommand]
     private void MergePdfs()
     {
         var openDialog = new OpenFileDialog

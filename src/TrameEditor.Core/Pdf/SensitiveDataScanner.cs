@@ -94,7 +94,10 @@ public static class SensitiveDataScanner
         var end = start + length;
         if (matches.Any(m => start < m.Start + m.Length && m.Start < end))
             return; // sovrapposto a un dato già riconosciuto (priorità al primo)
-        matches.Add(new SensitiveMatch(line, kind, text.Substring(start, length), start, length));
+        var value = text.Substring(start, length);
+        if (value.Where(char.IsLetterOrDigit).All(c => c == 'X'))
+            return; // già mascherato da una precedente anonimizzazione
+        matches.Add(new SensitiveMatch(line, kind, value, start, length));
     }
 
     /// <summary>Maschera gli intervalli indicati: lettere e cifre → 'X',

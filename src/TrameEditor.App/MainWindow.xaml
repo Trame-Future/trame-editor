@@ -177,6 +177,20 @@
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE8A4;" />
                         </fluent:Button.Icon>
                     </fluent:Button>
+                    <fluent:Button Header="Confronta PDF" Size="Middle" Focusable="False"
+                                   ToolTip="Confronta il testo di due versioni di un PDF (aggiunte e rimozioni)"
+                                   Command="{Binding ComparePdfsCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontSize="13" Text="⇄" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
+                    <fluent:Button Header="Ricette" Size="Middle" Focusable="False"
+                                   ToolTip="Applica OCR/Anonimizza/Comprimi/Proteggi a molti PDF in serie"
+                                   Command="{Binding OpenBatchCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontSize="13" Text="⚙" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
                     <fluent:Button Header="I miei dati" Size="Middle" Focusable="False"
                                    ToolTip="I tuoi dati per la compilazione automatica dei moduli (cifrati sul PC)"
                                    Click="Profile_Click">

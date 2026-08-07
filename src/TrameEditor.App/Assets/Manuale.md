@@ -103,6 +103,22 @@ Le scansioni vanno prima passate con l'**OCR**.
 - I PDF protetti si aprono normalmente: l'app chiede la password e il file originale resta cifrato.
 - **Esporta immagini** (una PNG per pagina), **Esporta testo** (.txt) e **Immagini in PDF** sono nel gruppo Strumenti.
 
+## Confronta due PDF ⇄
+
+**Ribbon → Strumenti → Confronta PDF**: scegli due versioni di un documento e vedi
+riga per riga cosa è stato **aggiunto** (verde) e **rimosso** (rosso), con il numero
+di pagina. Le parti identiche lunghe vengono compresse in "⋯ N righe identiche ⋯".
+Puoi salvare un **rapporto HTML** da allegare o archiviare.
+Il confronto riguarda il testo, non la grafica.
+
+## Ricette (elaborazione in serie) ⚙
+
+**Ribbon → Strumenti → Ricette**: scegli tanti PDF e applica a tutti la stessa
+sequenza di passi: **OCR → Anonimizza → Comprimi → Proteggi con password**
+(attivi solo quelli che ti servono). I risultati finiscono in una cartella a tua
+scelta; **gli originali non vengono mai toccati**. Ogni file riceve un esito
+dettagliato; i PDF già protetti da password vengono saltati e segnalati.
+
 ## Scorciatoie
 
 | Tasti | Azione |

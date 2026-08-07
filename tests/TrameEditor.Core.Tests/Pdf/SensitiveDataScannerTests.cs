@@ -56,6 +56,12 @@ public class SensitiveDataScannerTests
     }
 
     [Fact]
+    public void AlreadyMaskedValues_AreNotDetectedAgain()
+    {
+        Assert.Empty(Scan("email XXXXX@XXXXXXX.XXX già anonimizzata"));
+    }
+
+    [Fact]
     public void MaskLine_MasksOnlyMatchedRanges_PreservingSpaces()
     {
         var line = LineOf("Codice fiscale: RSSMRA80A01H501U e telefono 353 375 5498");
