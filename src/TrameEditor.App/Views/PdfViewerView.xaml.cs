@@ -96,6 +96,13 @@ public partial class PdfViewerView : UserControl
         await vm.HandlePageClickAsync(page, position.X / vm.Zoom, position.Y / vm.Zoom);
     }
 
+    private void QaSettings_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsWindow.ShowEditor();
+        if (DataContext is PdfDocumentViewModel vm)
+            vm.RetryQaCommand.Execute(null);
+    }
+
     private void QaSource_Click(object sender, RoutedEventArgs e)
     {
         if (((FrameworkElement)sender).DataContext is not int pageNumber ||

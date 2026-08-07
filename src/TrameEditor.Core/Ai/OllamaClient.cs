@@ -52,6 +52,47 @@ public sealed class OllamaClient
             .Select(v => (float)v.GetDouble()).ToArray();
     }
 
+    /// <summary>Scarica un modello riportando il progresso ("scarico… 45%").
+    /// Usa /api/pull in streaming; può durare minuti.</summary>
+    public async Task PullModelAsync(string model, IProgress<string>? progress,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = new System.Text.Json.Nodes.JsonObject
+        {
+            ["model"] = model,
+            ["stream"] = true,
+        }.ToJsonString();
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/pull")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json"),
+        };
+        using var response = await Http.SendAsync(request,
+            HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(stream);
+        while (await reader.ReadLineAsync(cancellationToken) is { } line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+            using var json = JsonDocument.Parse(line);
+            var root = json.RootElement;
+            if (root.TryGetProperty("error", out var error))
+                throw new InvalidOperationException(error.GetString());
+            var status = root.TryGetProperty("status", out var s) ? s.GetString() : null;
+            if (root.TryGetProperty("total", out var total) &&
+                root.TryGetProperty("completed", out var completed) &&
+                total.GetInt64() > 0)
+            {
+                progress?.Report($"{model}: scarico… {completed.GetInt64() * 100 / total.GetInt64()}%");
+            }
+            else if (!string.IsNullOrEmpty(status))
+            {
+                progress?.Report($"{model}: {status}");
+            }
+        }
+    }
+
     /// <summary>Chat in streaming: restituisce i frammenti di risposta man mano.</summary>
     public async IAsyncEnumerable<string> ChatStreamAsync(string model,
         string systemPrompt, string userPrompt,

@@ -48,6 +48,9 @@ public partial class MainWindow : Fluent.RibbonWindow
     private void Profile_Click(object sender, RoutedEventArgs e) =>
         ProfileWindow.ShowEditor();
 
+    private void Settings_Click(object sender, RoutedEventArgs e) =>
+        SettingsWindow.ShowEditor();
+
     private void Window_DragOver(object sender, DragEventArgs e)
     {
         e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)

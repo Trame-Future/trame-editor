@@ -433,9 +433,13 @@
                                FontSize="14" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,4" />
                     <TextBlock DockPanel.Dock="Top" Text="{Binding QaStatus}" TextWrapping="Wrap"
                                FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,6" />
-                    <Button DockPanel.Dock="Top" Content="Riprova" Padding="10,3" HorizontalAlignment="Left"
-                            Command="{Binding RetryQaCommand}" Margin="0,0,0,6"
-                            Visibility="{Binding QaUnavailable, Converter={StaticResource BoolToVisibility}}" />
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6"
+                                Visibility="{Binding QaUnavailable, Converter={StaticResource BoolToVisibility}}">
+                        <Button Content="Impostazioni AI…" Padding="10,3" FontWeight="SemiBold"
+                                Click="QaSettings_Click" />
+                        <Button Content="Riprova" Padding="10,3" Margin="6,0,0,0"
+                                Command="{Binding RetryQaCommand}" />
+                    </StackPanel>
                     <StackPanel DockPanel.Dock="Bottom">
                         <DockPanel Margin="0,6,0,0">
                             <Button DockPanel.Dock="Right" Content="Invia" Padding="10,4" Margin="6,0,0,0"

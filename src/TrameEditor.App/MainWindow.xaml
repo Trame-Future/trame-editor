@@ -191,6 +191,13 @@
                             <TextBlock FontSize="13" Text="⚙" />
                         </fluent:Button.Icon>
                     </fluent:Button>
+                    <fluent:Button Header="Impostazioni" Size="Middle" Focusable="False"
+                                   ToolTip="Assistente AI: connessione, requisiti del PC, installazione automatica"
+                                   Click="Settings_Click">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE713;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
                     <fluent:Button Header="I miei dati" Size="Middle" Focusable="False"
                                    ToolTip="I tuoi dati per la compilazione automatica dei moduli (cifrati sul PC)"
                                    Click="Profile_Click">

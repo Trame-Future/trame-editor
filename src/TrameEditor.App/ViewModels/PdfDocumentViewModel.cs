@@ -842,10 +842,9 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             catch
             {
                 QaUnavailable = true;
-                QaStatus = $"Ollama non trovato su {endpoint}. È il motore gratuito che fa girare l'AI " +
-                    "sul tuo computer: installalo da ollama.com, poi apri il terminale e scrivi:\n\n" +
-                    "ollama pull qwen2.5:3b\n\nSe Ollama usa un'altra porta, imposta \"OllamaEndpoint\" " +
-                    "nel file %APPDATA%\\TrameEditor\\impostazioni.json.\n\nInfine premi Riprova.";
+                QaStatus = $"Ollama non trovato su {endpoint}.\n\n" +
+                    "Apri \"Impostazioni AI\" qui sotto: verifica se il tuo PC ha i requisiti " +
+                    "e installa tutto automaticamente con un click. Poi premi Riprova.";
                 return;
             }
 
@@ -853,8 +852,8 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             if (chatModel is null)
             {
                 QaUnavailable = true;
-                QaStatus = "Ollama è attivo ma non c'è un modello di chat. " +
-                    "Apri il terminale e scrivi:\n\nollama pull qwen2.5:3b\n\nPoi premi Riprova.";
+                QaStatus = "Ollama è attivo ma manca un modello di chat. " +
+                    "Apri \"Impostazioni AI\" qui sotto e usa l'installazione automatica. Poi premi Riprova.";
                 return;
             }
 

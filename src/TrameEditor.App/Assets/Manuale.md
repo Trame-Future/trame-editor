@@ -123,16 +123,17 @@ L'AI gira **interamente sul tuo computer**: nessun documento viene caricato da n
 - Facoltativo: `ollama pull nomic-embed-text` migliora la ricerca del contesto
   nei documenti lunghi.
 
-**Configurazione: di norma nessuna.** L'app cerca Ollama all'indirizzo standard
-(`http://localhost:11434`). Solo se Ollama gira su un'altra porta o su un altro
-computer della rete locale, apri il file **`%APPDATA%\TrameEditor\impostazioni.json`**
-(viene creato al primo avvio) e cambia la riga:
+**Installazione e configurazione: tutto dall'app.** Ribbon → Strumenti →
+**Impostazioni**: la finestra verifica se il tuo PC ha i requisiti, e col pulsante
+**"Installa e configura tutto automaticamente"** scarica Ollama e il modello al
+posto tuo (serve internet solo per questa operazione: dopo, l'AI funziona per
+sempre offline). Lì trovi anche l'indirizzo di Ollama con "Prova connessione" —
+da cambiare solo se gira su un'altra porta o su un altro PC della rete.
 
-```json
-{ "OllamaEndpoint": "http://localhost:11434" }
-```
-
-poi riavvia TrameEditor (o premi Riprova nel pannello).
+**Usare l'AI anche fuori da TrameEditor.** Il modello installato è tuo:
+- **Chat grafica**: apri l'app **Ollama** dal menu Start (o dall'icona vicino all'orologio)
+- **Terminale**: `ollama run qwen2.5:3b` (per uscire: `/bye`)
+- **Per sviluppatori**: API HTTP su `http://localhost:11434`
 
 **Come funziona:**
 

@@ -1,0 +1,75 @@
+<Window x:Class="TrameEditor.App.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Impostazioni — Assistente AI"
+        Icon="Assets/icon-256.png"
+        Width="600" Height="640" MinWidth="520" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Background="White">
+    <DockPanel Margin="18,14">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0" LastChildFill="False">
+            <Button DockPanel.Dock="Right" Content="Chiudi" Width="90" Padding="0,5" IsCancel="True" />
+            <Button DockPanel.Dock="Right" Content="Salva" Width="90" Padding="0,5" Margin="0,0,8,0"
+                    FontWeight="Bold" Click="Save_Click" />
+        </DockPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Connessione -->
+                <TextBlock Text="Connessione a Ollama" FontWeight="Bold" FontSize="14"
+                           Foreground="{StaticResource AccentBrush}" />
+                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource TextMutedBrush}"
+                           Margin="0,2,0,6"
+                           Text="Di norma non serve cambiare nulla: l'indirizzo standard va bene. Modificalo solo se Ollama usa un'altra porta o gira su un altro computer della rete." />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Prova connessione" Padding="10,4"
+                            Margin="8,0,0,0" Click="TestConnection_Click" />
+                    <TextBox x:Name="EndpointBox" Padding="4,4" VerticalContentAlignment="Center" />
+                </DockPanel>
+                <TextBlock x:Name="ConnectionResult" TextWrapping="Wrap" FontSize="11"
+                           Margin="0,4,0,0" Foreground="{StaticResource TextMutedBrush}" />
+
+                <!-- Requisiti -->
+                <TextBlock Text="Requisiti del PC" FontWeight="Bold" FontSize="14"
+                           Foreground="{StaticResource AccentBrush}" Margin="0,16,0,2" />
+                <TextBlock x:Name="RequirementsSummary" FontWeight="SemiBold" Margin="0,2,0,2" />
+                <ItemsControl x:Name="RequirementsNotes" Margin="0,0,0,4">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12" Margin="0,1" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Installazione -->
+                <TextBlock Text="Installazione automatica" FontWeight="Bold" FontSize="14"
+                           Foreground="{StaticResource AccentBrush}" Margin="0,16,0,2" />
+                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource TextMutedBrush}"
+                           Margin="0,0,0,6"
+                           Text="Installa Ollama (se manca), lo avvia e scarica il modello (~2 GB). Serve una connessione internet solo per questa operazione: dopo, l'AI funziona per sempre offline." />
+                <CheckBox x:Name="EmbeddingCheck" IsChecked="True" FontSize="12"
+                          Content="Scarica anche il modello per i documenti lunghi (~270 MB, consigliato)" />
+                <Button x:Name="InstallButton" Margin="0,8,0,0" Padding="0,7" FontWeight="Bold"
+                        Content="Installa e configura tutto automaticamente" Click="Install_Click" />
+                <Border x:Name="ProgressPanel" Margin="0,8,0,0" Background="#F6F6F4" CornerRadius="4"
+                        Padding="8" Visibility="Collapsed">
+                    <TextBlock x:Name="ProgressText" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" />
+                </Border>
+
+                <!-- Uso esterno -->
+                <TextBlock Text="Usare l'AI anche fuori da TrameEditor" FontWeight="Bold" FontSize="14"
+                           Foreground="{StaticResource AccentBrush}" Margin="0,16,0,2" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19">
+                    Una volta installato, il modello è tuo e funziona anche senza TrameEditor:<LineBreak />
+                    • <Bold>Chat grafica</Bold>: apri l'app <Bold>Ollama</Bold> dal menu Start (o dall'icona
+                    vicino all'orologio) e scrivi come in una chat.<LineBreak />
+                    • <Bold>Terminale</Bold>: apri il Prompt dei comandi e scrivi
+                    <Run FontFamily="Consolas">ollama run qwen2.5:3b</Run> — per uscire:
+                    <Run FontFamily="Consolas">/bye</Run><LineBreak />
+                    • <Bold>Per sviluppatori</Bold>: API HTTP su
+                    <Run FontFamily="Consolas">http://localhost:11434</Run><LineBreak />
+                    Anche lì vale la stessa regola: tutto resta sul tuo computer.
+                </TextBlock>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>
