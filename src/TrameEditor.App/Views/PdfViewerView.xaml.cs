@@ -96,6 +96,16 @@ public partial class PdfViewerView : UserControl
         await vm.HandlePageClickAsync(page, position.X / vm.Zoom, position.Y / vm.Zoom);
     }
 
+    private void QaSource_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).DataContext is not int pageNumber ||
+            DataContext is not PdfDocumentViewModel vm)
+            return;
+        var page = vm.Pages.FirstOrDefault(p => p.OriginalIndex + 1 == pageNumber);
+        if (page is not null)
+            PageList.ScrollIntoView(page);
+    }
+
     private void PageList_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (Keyboard.Modifiers != ModifierKeys.Control ||

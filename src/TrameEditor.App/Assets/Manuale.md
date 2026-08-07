@@ -103,6 +103,19 @@ Le scansioni vanno prima passate con l'**OCR**.
 - I PDF protetti si aprono normalmente: l'app chiede la password e il file originale resta cifrato.
 - **Esporta immagini** (una PNG per pagina), **Esporta testo** (.txt) e **Immagini in PDF** sono nel gruppo Strumenti.
 
+## Chiedi al documento 💬 (AI locale)
+
+Il pulsante **"💬 Chiedi"** apre un assistente che risponde a domande sul PDF aperto:
+*"quanto devo pagare e entro quando?"*, *"qual è la durata del contratto?"*…
+
+- L'AI gira **interamente sul tuo computer** grazie a **Ollama** (gratuito): se non
+  è installato, il pannello ti guida — scarica da [ollama.com](https://ollama.com),
+  poi nel terminale: `ollama pull qwen2.5:3b`.
+- Ogni risposta indica le **pagine di provenienza**: clicca "pag. N" per andarci.
+- Regole d'onestà: l'assistente usa **solo il contenuto del documento**, e se non
+  trova la risposta lo dice. Ma può comunque sbagliare: **verifica sempre sul documento**.
+- Le scansioni vanno prima passate con l'**OCR**.
+
 ## Confronta due PDF ⇄
 
 **Ribbon → Strumenti → Confronta PDF**: scegli due versioni di un documento e vedi
