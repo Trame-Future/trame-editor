@@ -108,6 +108,29 @@ Utile prima di inviare un documento a terzi. Se qualche riga non è rimovibile
 (testo dentro moduli grafici), l'app **te lo dice chiaramente**: mai una falsa sicurezza.
 Le scansioni vanno prima passate con l'**OCR**.
 
+## Documenti firmati digitalmente (.p7m) ✍
+
+I file **`.p7m`** sono "buste" firmate digitalmente: arrivano di continuo dalla pubblica
+amministrazione, dai fornitori e dai commercialisti, e nessun programma comune sa aprirli.
+
+**Aprilo come un file qualsiasi** (doppio clic, *Apri*, o trascinandolo sulla finestra):
+TrameEditor tira fuori il documento che c'è dentro, lo apre, e ti mostra **chi l'ha firmato**,
+quando, e se il documento è ancora quello firmato. Da lì puoi trattarlo come qualunque altro
+documento: anonimizzarlo, convertirlo in PDF/A, confrontarlo, farci domande.
+
+Sui **PDF già firmati** il pulsante **Firme** (gruppo Strumenti) mostra lo stesso riquadro.
+Se un PDF firmato è stato modificato dopo la firma, te lo dice: *"la firma non copre tutto il
+file"*.
+
+**Che cosa verifichiamo e che cosa no.** Verifichiamo che il documento **non sia stato
+alterato** dopo la firma e le date di validità del certificato. **Non** verifichiamo se il
+certificato sia stato revocato né se l'ente che l'ha emesso sia accreditato: questo **non è un
+accertamento di validità legale**. Per quello serve un verificatore qualificato (per esempio
+quello dell'AgID). Il riquadro lo scrive ogni volta.
+
+TrameEditor **non firma** i documenti: la firma digitale qualificata richiede il tuo
+dispositivo (smart card o token) e il software del certificatore.
+
 ## PDF — Converti in PDF/A (archiviazione) 🗄
 
 Il **PDF/A** è la versione del PDF pensata per durare: tutto ciò che serve a rileggere il

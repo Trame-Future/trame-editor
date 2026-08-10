@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
@@ -11,12 +11,13 @@ using TrameEditor.Core.Ai;
 using TrameEditor.Core.Documents;
 using TrameEditor.Core.Ocr;
 using TrameEditor.Core.Pdf;
+using TrameEditor.Core.Signatures;
 
 namespace TrameEditor.App.ViewModels;
 
 public sealed record PdfSearchMatch(PdfPageViewModel Page, string Snippet)
 {
-    public string Display => $"Pag. {Page.PageNumber} — {Snippet}";
+    public string Display => $"Pag. {Page.PageNumber} â€” {Snippet}";
 }
 
 public enum PdfAnnotationTool
@@ -100,7 +101,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     }
 
     /// <summary>Chiesta una pagina (clic su una citazione dell'assistente): la
-    /// vista scorre fin lì.</summary>
+    /// vista scorre fin lÃ¬.</summary>
     public event EventHandler<int>? PageRequested;
 
     public static PdfDocumentViewModel CreateFromFile(string path) =>
@@ -130,7 +131,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         var targets = SelectedPages();
         if (targets.Count == 0)
         {
-            ShowInfo("Seleziona una o più pagine dalle miniature a sinistra.");
+            ShowInfo("Seleziona una o piÃ¹ pagine dalle miniature a sinistra.");
             return;
         }
         foreach (var page in targets)
@@ -144,7 +145,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         var targets = SelectedPages();
         if (targets.Count == 0)
         {
-            ShowInfo("Seleziona una o più pagine dalle miniature a sinistra.");
+            ShowInfo("Seleziona una o piÃ¹ pagine dalle miniature a sinistra.");
             return;
         }
         if (targets.Count == Pages.Count)
@@ -282,9 +283,9 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     }
 
     private static string TrimSnippet(string text) =>
-        text.Length <= 70 ? text : text[..70] + "…";
+        text.Length <= 70 ? text : text[..70] + "â€¦";
 
-    // ----- Modalità "Modifica testo" (M3) -----
+    // ----- ModalitÃ  "Modifica testo" (M3) -----
 
     partial void OnEditModeChanged(bool value)
     {
@@ -400,12 +401,12 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             return;
         if (!region.IsEditable)
         {
-            ShowInfo(region.Line.NotEditableReason ?? "Questa riga non è modificabile.");
+            ShowInfo(region.Line.NotEditableReason ?? "Questa riga non Ã¨ modificabile.");
             return;
         }
         ActiveRegion = region;
         EditText = region.Line.Text;
-        PlanDescription = "analisi del font in corso…";
+        PlanDescription = "analisi del font in corsoâ€¦";
         _ = UpdatePlanAsync(region);
     }
 
@@ -442,10 +443,10 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             var plan = await Task.Run(() => PdfTextReplacer.PlanFor(_workingPath, region.Line, newText));
             if (plan.Strategy != PdfFontStrategy.ReuseEmbedded)
             {
-                // Onestà prima di applicare: il risultato non userà il font originale.
+                // OnestÃ  prima di applicare: il risultato non userÃ  il font originale.
                 var answer = MessageBox.Show(
-                    $"Il font originale non può essere riutilizzato per questo testo.\n" +
-                    $"Verrà usato: {plan.Description}.\n\nApplicare comunque?",
+                    $"Il font originale non puÃ² essere riutilizzato per questo testo.\n" +
+                    $"VerrÃ  usato: {plan.Description}.\n\nApplicare comunque?",
                     "TrameEditor", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (answer != MessageBoxResult.Yes)
                     return;
@@ -504,7 +505,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
         if (FormMode)
             _ = LoadFormFieldsAsync();
-        ResetQa(); // il testo è cambiato: la sessione dell'assistente va ricostruita
+        ResetQa(); // il testo Ã¨ cambiato: la sessione dell'assistente va ricostruita
     }
 
     // ----- Annotazioni (M4): evidenzia, nota, timbro immagine -----
@@ -519,7 +520,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
                 line.PageNumber, line.Left, line.Bottom, line.Width, line.Height));
     }
 
-    /// <summary>Click sulla pagina con Nota o Timbro attivi; coordinate in unità
+    /// <summary>Click sulla pagina con Nota o Timbro attivi; coordinate in unitÃ 
     /// display a zoom 100% (equivalenti ai punti PDF), origine in alto a sinistra.</summary>
     public async Task HandlePageClickAsync(PdfPageViewModel page, double x, double y)
     {
@@ -562,7 +563,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     private async Task LoadFormFieldsAsync()
     {
         FormFields.Clear();
-        FormStatus = "lettura del modulo…";
+        FormStatus = "lettura del moduloâ€¦";
         try
         {
             var fields = await Task.Run(() => PdfFormService.GetFields(_workingPath));
@@ -609,13 +610,13 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         {
             var field = FormFields.FirstOrDefault(f => f.Name == proposal.FieldName);
             if (field is null || !string.IsNullOrWhiteSpace(field.Value))
-                continue; // mai sovrascrivere quello che c'è già
+                continue; // mai sovrascrivere quello che c'Ã¨ giÃ 
             field.Value = proposal.Value;
             filled++;
         }
 
         FormStatus = filled == 0
-            ? "Nessun campo abbinabile ai dati del profilo (o già compilati)."
+            ? "Nessun campo abbinabile ai dati del profilo (o giÃ  compilati)."
             : $"Compilati {filled} campi dal profilo. Controlla i valori e premi \"Applica al PDF\".";
     }
 
@@ -640,7 +641,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         var answer = MessageBox.Show(
             "Le pagine senza layer di testo (scansioni) verranno riconosciute con OCR " +
             "(italiano + inglese, tutto offline) e riceveranno un layer di testo invisibile: " +
-            "il PDF diventerà ricercabile senza cambiare aspetto.\n\nProcedere?",
+            "il PDF diventerÃ  ricercabile senza cambiare aspetto.\n\nProcedere?",
             "TrameEditor", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (answer != MessageBoxResult.Yes)
             return;
@@ -658,13 +659,13 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
 
             if (result.PagesProcessed == 0)
             {
-                ShowInfo("Tutte le pagine hanno già un layer di testo: niente da riconoscere.");
+                ShowInfo("Tutte le pagine hanno giÃ  un layer di testo: niente da riconoscere.");
                 return;
             }
             SwapWorkingFile(newWorking);
             IsDirty = true;
             ShowInfo($"OCR completato: {result.PagesProcessed} pagine riconosciute, " +
-                $"{result.WordsFound} parole. Ora il testo è ricercabile.");
+                $"{result.WordsFound} parole. Ora il testo Ã¨ ricercabile.");
         }
         catch (Exception ex)
         {
@@ -805,7 +806,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     private bool _askMode;
 
     /// <summary>Il pannello dell'assistente legge le pagine della copia di lavoro:
-    /// così vede anche le modifiche non ancora salvate (OCR, testo, annotazioni).</summary>
+    /// cosÃ¬ vede anche le modifiche non ancora salvate (OCR, testo, annotazioni).</summary>
     public DocumentQaViewModel Qa { get; }
 
     partial void OnAskModeChanged(bool value)
@@ -869,9 +870,9 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
                 "\nRicorda di salvare con \"Salva con nome\".";
             if (result.SkippedLines.Count > 0)
             {
-                message += $"\n\n⚠ ATTENZIONE: {result.SkippedLines.Count} righe non erano " +
-                    "rimovibili (testo dentro moduli grafici): i dati lì presenti NON sono stati tolti:\n" +
-                    string.Join("\n", result.SkippedLines.Take(5).Select(l => "• " + l.Text));
+                message += $"\n\nâš  ATTENZIONE: {result.SkippedLines.Count} righe non erano " +
+                    "rimovibili (testo dentro moduli grafici): i dati lÃ¬ presenti NON sono stati tolti:\n" +
+                    string.Join("\n", result.SkippedLines.Take(5).Select(l => "â€¢ " + l.Text));
             }
             MessageBox.Show(message, "TrameEditor", MessageBoxButton.OK,
                 result.SkippedLines.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
@@ -966,7 +967,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
                 PdfPageOperations.Build(working, pages, staged);
                 PdfCryptoService.Encrypt(staged, target, password);
             });
-            ShowInfo($"PDF protetto salvato: \"{Path.GetFileName(target)}\".\nConserva la password: senza non sarà apribile.");
+            ShowInfo($"PDF protetto salvato: \"{Path.GetFileName(target)}\".\nConserva la password: senza non sarÃ  apribile.");
         }
         catch (Exception ex)
         {
@@ -979,11 +980,37 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
     }
 
+    // ----- Firme digitali (M12) -----
+
+    /// <summary>Mostra le firme digitali del documento. Si guarda il file
+    /// <b>originale</b>, non la copia di lavoro: le modifiche in sospeso
+    /// invaliderebbero le firme e darebbero un esito fuorviante.</summary>
+    [RelayCommand]
+    private async Task ShowSignaturesAsync()
+    {
+        var path = FilePath ?? _workingPath;
+        try
+        {
+            IsSearching = true;
+            var signatures = await Task.Run(() => PdfSignatureInspector.Inspect(path));
+            SignaturesWindow.ShowFor(Path.GetFileName(path), signatures);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Lettura delle firme non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
     // ----- Conversione in PDF/A (M11) -----
 
     /// <summary>
     /// Converte il documento in PDF/A-2 per l'archiviazione. Prima di toccare
-    /// qualunque cosa mostra il rapporto di conformità e fa scegliere fra la
+    /// qualunque cosa mostra il rapporto di conformitÃ  e fa scegliere fra la
     /// conversione fedele e quella per immagine.
     /// </summary>
     [RelayCommand]
@@ -1066,7 +1093,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             }
             catch
             {
-                // file temporaneo ancora in uso: verrà ripulito al prossimo avvio del SO
+                // file temporaneo ancora in uso: verrÃ  ripulito al prossimo avvio del SO
             }
         }
     }

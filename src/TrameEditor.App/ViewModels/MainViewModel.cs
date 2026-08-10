@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using TrameEditor.Core.Markdown;
 using TrameEditor.Core.Pdf;
+using TrameEditor.Core.Signatures;
 using TrameEditor.Core.Session;
 
 namespace TrameEditor.App.ViewModels;
@@ -78,7 +79,7 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>All'avvio: se ci sono bozze la sessione precedente è stata interrotta.
+    /// <summary>All'avvio: se ci sono bozze la sessione precedente Ã¨ stata interrotta.
     /// Restituisce true se l'utente le ha ripristinate.</summary>
     public bool TryRestoreDrafts()
     {
@@ -87,7 +88,7 @@ public partial class MainViewModel : ObservableObject
             return false;
 
         var answer = MessageBox.Show(
-            $"La sessione precedente si è interrotta con {drafts.Count} " +
+            $"La sessione precedente si Ã¨ interrotta con {drafts.Count} " +
             (drafts.Count == 1 ? "documento non salvato" : "documenti non salvati") +
             ".\nVuoi ripristinare le bozze?",
             "TrameEditor", MessageBoxButton.YesNo, MessageBoxImage.Warning);
@@ -128,7 +129,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Salva sessione e recenti (chiamato alla chiusura confermata).
-    /// La chiusura è pulita: le bozze di autosalvataggio non servono più.</summary>
+    /// La chiusura Ã¨ pulita: le bozze di autosalvataggio non servono piÃ¹.</summary>
     public void SaveSession()
     {
         try
@@ -143,7 +144,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch
         {
-            // la sessione è un comfort: mai bloccare la chiusura per questo
+            // la sessione Ã¨ un comfort: mai bloccare la chiusura per questo
         }
     }
 
@@ -162,14 +163,14 @@ public partial class MainViewModel : ObservableObject
             OpenPath(path);
         else
         {
-            ShowError($"Il file non esiste più:\n{path}");
+            ShowError($"Il file non esiste piÃ¹:\n{path}");
             RecentFiles.Remove(path);
         }
     }
 
     public string WindowTitle => SelectedDocument is null
         ? "TrameEditor"
-        : $"{SelectedDocument.DisplayName} — TrameEditor";
+        : $"{SelectedDocument.DisplayName} â€” TrameEditor";
 
     partial void OnSelectedDocumentChanged(DocumentTabViewModel? oldValue, DocumentTabViewModel? newValue)
     {
@@ -211,6 +212,12 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        if (P7mReader.IsP7m(path))
+        {
+            OpenSignedEnvelope(path);
+            return;
+        }
+
         try
         {
             DocumentTabViewModel? document;
@@ -236,6 +243,57 @@ public partial class MainViewModel : ObservableObject
         {
             ShowError($"Impossibile aprire \"{path}\":\n{ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Apre una busta firmata <c>.p7m</c>: tira fuori il documento che contiene,
+    /// lo apre come un file normale e mostra chi l'ha firmato. Ãˆ il formato che
+    /// arriva di continuo dalla pubblica amministrazione e che nessun programma
+    /// comune sa aprire.
+    /// </summary>
+    private void OpenSignedEnvelope(string path)
+    {
+        P7mContent content;
+        try
+        {
+            content = P7mReader.Read(path);
+        }
+        catch (SignatureReadException ex)
+        {
+            ShowError(ex.Message);
+            return;
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Impossibile aprire \"{Path.GetFileName(path)}\":\n{ex.Message}");
+            return;
+        }
+
+        string extracted;
+        try
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "TrameEditor", "firmati");
+            Directory.CreateDirectory(directory);
+            extracted = Path.Combine(directory, content.SuggestedFileName);
+            File.WriteAllBytes(extracted, content.Data);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Documento estratto ma non salvabile:\n{ex.Message}");
+            return;
+        }
+
+        OpenPath(extracted);
+        RegisterRecent(path);
+
+        // Il riquadro delle firme si apre quando la finestra principale è pronta:
+        // un dialogo modale aperto mentre l'applicazione sta ancora nascendo
+        // (apertura da riga di comando o da trascinamento all'avvio) resta vuoto.
+        var fileName = Path.GetFileName(path);
+        var signers = content.Signers;
+        Application.Current.Dispatcher.BeginInvoke(
+            new Action(() => SignaturesWindow.ShowFor(fileName, signers)),
+            System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
     /// <summary>Chiede la password e apre il PDF su una copia decifrata temporanea.
@@ -302,7 +360,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (SelectedDocument is not TextDocumentViewModel { IsMarkdown: true } document)
         {
-            ShowError("L'export HTML è disponibile solo per i file Markdown (.md).");
+            ShowError("L'export HTML Ã¨ disponibile solo per i file Markdown (.md).");
             return;
         }
 
@@ -333,7 +391,7 @@ public partial class MainViewModel : ObservableObject
         if (SelectedDocument is not TextDocumentViewModel document)
         {
             ShowError("L'export PDF riguarda i documenti di testo e Markdown. " +
-                "Un PDF già aperto si salva con \"Salva con nome\", oppure si archivia " +
+                "Un PDF giÃ  aperto si salva con \"Salva con nome\", oppure si archivia " +
                 "con \"Converti in PDF/A\".");
             return;
         }
@@ -383,7 +441,7 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>Confronta due documenti: PDF, testo o Markdown, anche misti —
+    /// <summary>Confronta due documenti: PDF, testo o Markdown, anche misti â€”
     /// il confronto guarda il testo, non il formato.</summary>
     [RelayCommand]
     private void CompareDocuments()

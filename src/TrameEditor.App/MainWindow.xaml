@@ -211,6 +211,13 @@
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE77B;" />
                         </fluent:Button.Icon>
                     </fluent:Button>
+                    <fluent:Button Header="Firme" Size="Middle" Focusable="False"
+                                   ToolTip="Chi ha firmato questo PDF, quando, e se il documento è ancora quello firmato"
+                                   Command="{Binding SelectedDocument.ShowSignaturesCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE8A9;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
                     <fluent:Button Header="Converti in PDF/A" Size="Middle" Focusable="False"
                                    ToolTip="Salva una copia in PDF/A-2, il formato per l'archiviazione a lungo termine"
                                    Command="{Binding SelectedDocument.ConvertToPdfACommand}">
