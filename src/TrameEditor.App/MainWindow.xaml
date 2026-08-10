@@ -51,6 +51,9 @@
                                      Command="{Binding ExportHtmlCommand}" />
                     <fluent:MenuItem Header="Esporta PDF…"
                                      Command="{Binding ExportPdfCommand}" />
+                    <fluent:MenuItem Header="Converti in PDF/A… (archiviazione)"
+                                     Command="{Binding SelectedDocument.ConvertToPdfACommand}"
+                                     ToolTip="Salva una copia in PDF/A-2, il formato per l'archiviazione a lungo termine" />
                     <fluent:MenuItem Header="Unisci PDF…"
                                      Command="{Binding MergePdfsCommand}" />
                     <Separator />

@@ -21,6 +21,18 @@ Funziona tutto **sul tuo computer**: nessun account, nessun caricamento su inter
 - Cerca e sostituisci con **Ctrl+F**.
 - **Autosalvataggio**: ogni 30 secondi le modifiche non salvate vengono messe in bozza; se il PC si spegne di colpo, al riavvio TrameEditor propone di **ripristinarle**.
 
+## Salvare testo e Markdown in PDF (e in PDF/A)
+
+Da un documento di testo o Markdown puoi produrre direttamente un PDF:
+
+- **Esporta PDF** (gruppo Strumenti, o *File → Esporta PDF…*) salva una copia in PDF.
+  Il **Markdown** viene impaginato come lo vedi nell'anteprima; un **.txt** resta testo
+  semplice a spaziatura fissa — un asterisco resta un asterisco e una riga che comincia
+  con `#` non diventa un titolo.
+- **Converti in PDF/A** (stesso gruppo, o *File → Converti in PDF/A…*) salta il passaggio
+  intermedio e ti dà direttamente il formato per l'**archiviazione a lungo termine**,
+  con lo stesso rapporto preventivo dei PDF.
+
 ## Markdown (.md)
 
 - **Anteprima affiancata** in tempo reale (pulsante "Anteprima" nella barra del documento).

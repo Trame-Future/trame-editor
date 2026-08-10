@@ -989,79 +989,26 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     [RelayCommand]
     private async Task ConvertToPdfAAsync()
     {
-        if (!SrgbColorProfile.IsAvailable)
-        {
-            MessageBox.Show(
-                "Il profilo colore sRGB di Windows non è disponibile su questo computer: " +
-                "senza di esso non è possibile produrre un PDF/A valido.",
-                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        string staged;
-        PdfAAnalysisReport report;
         try
         {
             IsSearching = true;
-            staged = NewTempPath();
+            // Si converte quello che vedi: le modifiche alle pagine in sospeso
+            // vengono applicate su una copia, l'originale non si tocca.
+            var staged = NewTempPath();
             var pages = Pages.Select(p => new PdfPageEdit(p.OriginalIndex, p.RotationDelta)).ToList();
             var working = _workingPath;
-            report = await Task.Run(() =>
-            {
-                PdfPageOperations.Build(working, pages, staged);
-                return PdfAAnalyzer.Analyze(staged);
-            });
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Analisi del documento non riuscita:\n{ex.Message}",
-                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
-        }
-        finally
-        {
-            IsSearching = false;
-        }
+            await Task.Run(() => PdfPageOperations.Build(working, pages, staged));
 
-        var ocrAvailable = Directory.Exists(TessdataPath());
-        var choice = PdfAWindow.Ask(report, ocrAvailable);
-        if (choice is null)
-            return;
-
-        var dialog = new SaveFileDialog
-        {
-            Filter = PdfFilter,
-            FileName = Path.GetFileNameWithoutExtension(FileName) + " - PDFA.pdf",
-        };
-        if (dialog.ShowDialog() != true)
-            return;
-
-        try
-        {
-            IsSearching = true;
-            var target = dialog.FileName;
-            var title = Path.GetFileNameWithoutExtension(FileName);
             var renderer = _renderer;
-            var result = await Task.Run(() => choice == PdfAWindow.Choice.Fedele
-                ? PdfAConverter.ConvertFaithfully(staged, target, title)
-                : PdfAConverter.ConvertByRasterizing(staged, target,
-                    pageNumber => renderer.RenderPagePngForOcr(pageNumber - 1),
-                    PdfRenderService.OcrScale,
-                    ocrAvailable ? TessdataPath() : null, title));
+            var outcome = await PdfAWorkflow.RunAsync(staged,
+                Path.GetFileNameWithoutExtension(FileName) + " - PDFA.pdf",
+                Path.GetFileNameWithoutExtension(FileName),
+                pageNumber => renderer.RenderPagePngForOcr(pageNumber - 1),
+                PdfRenderService.OcrScale,
+                TessdataPath());
 
-            // Se l'utente ha installato veraPDF, la parola definitiva è la sua.
-            var veraPdfPath = VeraPdfValidator.FindExecutable(
-                TrameEditor.Core.Session.AppSettings.Load().VeraPdfPath);
-            var validation = veraPdfPath is null
-                ? null
-                : await Task.Run(() => VeraPdfValidator.Validate(veraPdfPath, target, result.Level));
-
-            ShowInfo(DescribeConversion(result, Path.GetFileName(target), validation));
-        }
-        catch (PdfAConversionException ex)
-        {
-            MessageBox.Show(ex.Message + "\n\nPuoi riprovare scegliendo la conversione per immagine.",
-                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Warning);
+            if (outcome is not null)
+                MessageBox.Show(outcome.Message, "TrameEditor", MessageBoxButton.OK, outcome.Icon);
         }
         catch (Exception ex)
         {
@@ -1072,44 +1019,6 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         {
             IsSearching = false;
         }
-    }
-
-    private static string DescribeConversion(PdfAConversionResult result, string fileName,
-        VeraPdfReport? validation)
-    {
-        var level = result.Level == PdfALevel.A2u ? "PDF/A-2u" : "PDF/A-2b";
-        var message = $"\"{fileName}\" salvato in {level} " +
-            $"({(result.Method == PdfAConversionMethod.Fedele ? "conversione fedele" : "conversione per immagine")}).\n\n" +
-            "Cosa è cambiato rispetto all'originale:\n" +
-            string.Join("\n", result.Changes.Select(c => $"• {c}"));
-
-        if (!result.VerificationClean)
-        {
-            var residui = result.Verification.Issues
-                .Where(i => i.Severity != PdfAIssueSeverity.Corretto)
-                .Select(i => $"• {i}");
-            message += "\n\nATTENZIONE — la verifica sul file prodotto segnala ancora:\n" +
-                string.Join("\n", residui);
-        }
-
-        if (validation is null)
-        {
-            return message + "\n\nLa nostra verifica è interna: per un deposito a norma fai validare " +
-                "il file con veraPDF. Puoi installarlo da Strumenti → Impostazioni.";
-        }
-
-        if (!validation.DidRun)
-            return message + $"\n\nValidazione veraPDF non eseguita: {validation.Error}";
-
-        if (validation.IsCompliant)
-            return message + $"\n\n✓ VALIDAZIONE FORMALE SUPERATA: veraPDF certifica il file come " +
-                $"PDF/A-{validation.Flavour}.";
-
-        var motivi = validation.Failures.Take(8).Select(f => $"• {f}");
-        return message + $"\n\n✗ VALIDAZIONE FORMALE NON SUPERATA (PDF/A-{validation.Flavour}). " +
-            "veraPDF segnala:\n" + string.Join("\n", motivi) +
-            (validation.Failures.Count > 8 ? $"\n… e altre {validation.Failures.Count - 8} regole." : "") +
-            "\n\nSegnalalo: ogni caso del genere per noi diventa un test.";
     }
 
     // ----- Riordino con drag & drop delle miniature (M5) -----

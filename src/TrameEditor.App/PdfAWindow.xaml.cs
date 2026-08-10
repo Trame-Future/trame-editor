@@ -23,7 +23,7 @@ public partial class PdfAWindow : Window
         public required string Text { get; init; }
     }
 
-    private PdfAWindow(PdfAAnalysisReport report, bool ocrAvailable)
+    private PdfAWindow(PdfAAnalysisReport report, bool ocrAvailable, bool rasterAvailable)
     {
         InitializeComponent();
 
@@ -76,17 +76,30 @@ public partial class PdfAWindow : Window
             LegalNote.Text = "Al termine il file prodotto verrà validato con veraPDF, il validatore " +
                 "formale che hai installato: il suo verdetto è quello che conta per un deposito a norma.";
 
-        RasterDetail.Text = ocrAvailable
-            ? "— ogni pagina diventa un'immagine con sotto il testo riconosciuto dall'OCR: " +
-              "la conformità è garantita, ma il testo originale è perduto e il file pesa di più."
-            : "— ogni pagina diventa un'immagine: la conformità è garantita, ma il testo " +
-              "è perduto e il documento non sarà ricercabile (OCR non disponibile).";
+        if (!rasterAvailable)
+        {
+            RasterChoice.IsEnabled = false;
+            RasterDetail.Text = "— non disponibile per questo documento.";
+            if (report.CanConvertFaithfully)
+                FaithfulChoice.IsChecked = true;
+        }
+        else
+        {
+            RasterDetail.Text = ocrAvailable
+                ? "— ogni pagina diventa un'immagine con sotto il testo riconosciuto dall'OCR: " +
+                  "la conformità è garantita, ma il testo originale è perduto e il file pesa di più."
+                : "— ogni pagina diventa un'immagine: la conformità è garantita, ma il testo " +
+                  "è perduto e il documento non sarà ricercabile (OCR non disponibile).";
+        }
     }
 
     /// <summary>Null se l'utente annulla.</summary>
-    public static Choice? Ask(PdfAAnalysisReport report, bool ocrAvailable)
+    public static Choice? Ask(PdfAAnalysisReport report, bool ocrAvailable, bool rasterAvailable = true)
     {
-        var dialog = new PdfAWindow(report, ocrAvailable) { Owner = Application.Current.MainWindow };
+        var dialog = new PdfAWindow(report, ocrAvailable, rasterAvailable)
+        {
+            Owner = Application.Current.MainWindow,
+        };
         if (dialog.ShowDialog() != true)
             return null;
         return dialog.FaithfulChoice.IsChecked == true ? Choice.Fedele : Choice.Raster;

@@ -1,8 +1,12 @@
 using System.ComponentModel;
 using System.IO;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using ICSharpCode.AvalonEdit.Document;
+using TrameEditor.App.Services;
 using TrameEditor.Core.Documents;
+using TrameEditor.Core.Markdown;
 using TrameEditor.Core.TextFiles;
 
 namespace TrameEditor.App.ViewModels;
@@ -135,4 +139,98 @@ public partial class TextDocumentViewModel : DocumentTabViewModel
 
     public bool IsPristineUntitled =>
         FilePath is null && !IsDirty && EditorDocument.TextLength == 0;
+
+    // ----- Esportazione in PDF e PDF/A -----
+
+    /// <summary>Il documento com'è adesso. Il testo di AvalonEdit si può leggere
+    /// <b>solo dal thread della UI</b>: chi lavora in background riceve questa
+    /// copia, non il documento vivo.</summary>
+    private (string Text, bool IsMarkdown, string Title) Snapshot() =>
+        (EditorDocument.Text, IsMarkdown, Path.GetFileNameWithoutExtension(FileName));
+
+    /// <summary>
+    /// Scrive il documento in PDF con la resa giusta per il tipo: il Markdown
+    /// impaginato come nell'anteprima, un .txt come testo semplice a spaziatura
+    /// fissa (un asterisco resta un asterisco).
+    /// </summary>
+    public void WritePdf(string targetPath)
+    {
+        var snapshot = Snapshot();
+        WritePdf(snapshot, targetPath);
+    }
+
+    private static void WritePdf((string Text, bool IsMarkdown, string Title) snapshot, string targetPath)
+    {
+        if (snapshot.IsMarkdown)
+            MarkdownPdfExporter.Export(snapshot.Text, snapshot.Title, targetPath);
+        else
+            MarkdownPdfExporter.ExportPlainText(snapshot.Text, snapshot.Title, targetPath);
+    }
+
+    private static string NewTemporaryPdfPath()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "TrameEditor");
+        Directory.CreateDirectory(directory);
+        return Path.Combine(directory, $"{Guid.NewGuid():N}.pdf");
+    }
+
+    /// <summary>
+    /// Salva il documento direttamente in PDF/A, il formato dell'archiviazione a
+    /// lungo termine: si passa dal PDF, ma l'utente non deve fare due giri.
+    /// </summary>
+    [RelayCommand]
+    private async Task ConvertToPdfAAsync()
+    {
+        if (EditorDocument.TextLength == 0)
+        {
+            MessageBox.Show("Il documento è vuoto: non c'è nulla da archiviare.",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var snapshot = Snapshot();
+        string staged;
+        try
+        {
+            staged = await Task.Run(() =>
+            {
+                var path = NewTemporaryPdfPath();
+                WritePdf(snapshot, path);
+                return path;
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Non sono riuscito a preparare il PDF di partenza:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        try
+        {
+            // Il documento appena creato si può anche rasterizzare: serve un
+            // renderer, che qui costruiamo sul PDF temporaneo.
+            using var renderer = new PdfRenderService(staged);
+            var tessdata = Path.Combine(AppContext.BaseDirectory, "tessdata");
+            var outcome = await PdfAWorkflow.RunAsync(staged,
+                Path.GetFileNameWithoutExtension(FileName) + " - PDFA.pdf",
+                Path.GetFileNameWithoutExtension(FileName),
+                pageNumber => renderer.RenderPagePngForOcr(pageNumber - 1),
+                PdfRenderService.OcrScale, tessdata);
+
+            if (outcome is not null)
+                MessageBox.Show(outcome.Message, "TrameEditor", MessageBoxButton.OK, outcome.Icon);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(staged);
+            }
+            catch
+            {
+                // file temporaneo: non vale la pena disturbare l'utente
+            }
+        }
+    }
 }

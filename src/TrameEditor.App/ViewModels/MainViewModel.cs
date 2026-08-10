@@ -325,12 +325,16 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Salva in PDF il documento di testo aperto: il Markdown impaginato
+    /// come nell'anteprima, un .txt come testo semplice a spaziatura fissa.</summary>
     [RelayCommand]
     private void ExportPdf()
     {
-        if (SelectedDocument is not TextDocumentViewModel { IsMarkdown: true } document)
+        if (SelectedDocument is not TextDocumentViewModel document)
         {
-            ShowError("L'export PDF è disponibile solo per i file Markdown (.md).");
+            ShowError("L'export PDF riguarda i documenti di testo e Markdown. " +
+                "Un PDF già aperto si salva con \"Salva con nome\", oppure si archivia " +
+                "con \"Converti in PDF/A\".");
             return;
         }
 
@@ -344,7 +348,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            MarkdownPdfExporter.Export(document.EditorDocument.Text, document.FileName, dialog.FileName);
+            document.WritePdf(dialog.FileName);
         }
         catch (Exception ex)
         {
