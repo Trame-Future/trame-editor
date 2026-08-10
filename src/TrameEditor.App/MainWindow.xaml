@@ -205,6 +205,13 @@
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE77B;" />
                         </fluent:Button.Icon>
                     </fluent:Button>
+                    <fluent:Button Header="Converti in PDF/A" Size="Middle" Focusable="False"
+                                   ToolTip="Salva una copia in PDF/A-2, il formato per l'archiviazione a lungo termine"
+                                   Command="{Binding SelectedDocument.ConvertToPdfACommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE81C;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
                     <fluent:Button Header="Proteggi PDF" Size="Middle" Focusable="False"
                                    ToolTip="Salva una copia del PDF protetta da password (AES-256)"
                                    Command="{Binding SelectedDocument.ProtectCommand}">

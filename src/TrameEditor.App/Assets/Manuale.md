@@ -96,6 +96,36 @@ Utile prima di inviare un documento a terzi. Se qualche riga non è rimovibile
 (testo dentro moduli grafici), l'app **te lo dice chiaramente**: mai una falsa sicurezza.
 Le scansioni vanno prima passate con l'**OCR**.
 
+## PDF — Converti in PDF/A (archiviazione) 🗄
+
+Il **PDF/A** è la versione del PDF pensata per durare: tutto ciò che serve a rileggere il
+documento fra vent'anni deve stare dentro il file. È il formato richiesto dalla
+**conservazione a norma** e dagli archivi pubblici.
+
+Il pulsante **Converti in PDF/A** (gruppo Strumenti) prima **esamina** il documento e ti
+mostra che cosa ha trovato, poi ti fa scegliere:
+
+- **Conversione fedele** — il documento resta com'è: testo selezionabile e cercabile.
+  Si può fare quando i font sono già incorporati, oppure quando sul tuo computer c'è lo
+  stesso font (o un equivalente con le stesse identiche misure: Helvetica↔Arial,
+  Times↔Times New Roman, Courier↔Courier New). Il livello prodotto è **PDF/A-2u**, che
+  garantisce anche l'estraibilità del testo, oppure **PDF/A-2b** se qualche font non ha
+  una mappatura Unicode affidabile.
+- **Conversione per immagine** — ogni pagina diventa un'immagine con sotto il testo
+  riconosciuto dall'**OCR**. Riesce sempre, ma il testo originale è perduto e il file
+  pesa di più. È la strada per i documenti che non si possono convertire fedelmente.
+
+Durante la conversione il programma toglie ciò che il PDF/A non ammette e **te lo elenca**:
+JavaScript, file allegati, azioni automatiche, annotazioni senza aspetto grafico, cifratura.
+I **moduli compilabili vengono appiattiti**: i valori restano, i campi non sono più modificabili.
+
+**Un limite dichiarato:** la verifica che facciamo è interna — ricontrolla sul file prodotto
+gli stessi punti dell'analisi. **Non è una validazione formale.** Se il file ti serve per un
+deposito a norma, fallo validare con **veraPDF** (validatore libero e riconosciuto) prima di
+consegnarlo. E se un font usato nel documento non è incorporato né sostituibile senza
+spostare il testo, l'app **rifiuta** la conversione fedele invece di consegnarti un archivio
+diverso dall'originale.
+
 ## PDF — altri strumenti
 
 - **Comprimi…** salva una copia alleggerita (immagini ricompresse) — utile per allegati email/PEC con limiti di peso.

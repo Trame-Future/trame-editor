@@ -60,36 +60,7 @@ public static class PdfOcrService
                     var page = document.GetPage(pageNumber);
                     var pageHeight = page.GetPageSize().GetHeight();
                     var canvas = TrameEditor.Core.Pdf.PdfOverlayCanvas.Create(document, page);
-                    canvas.BeginText();
-                    canvas.SetTextRenderingMode(PdfCanvasConstants.TextRenderingMode.INVISIBLE);
-
-                    using var iterator = ocrPage.GetIterator();
-                    iterator.Begin();
-                    do
-                    {
-                        if (!iterator.TryGetBoundingBox(PageIteratorLevel.Word, out var box))
-                            continue;
-                        var word = iterator.GetText(PageIteratorLevel.Word)?.Trim();
-                        if (string.IsNullOrEmpty(word))
-                            continue;
-
-                        var x = box.X1 / renderScale;
-                        var y = pageHeight - box.Y2 / renderScale;
-                        var size = Math.Max(4.0, (box.Y2 - box.Y1) / renderScale);
-                        try
-                        {
-                            canvas.SetFontAndSize(font, (float)size);
-                            canvas.SetTextMatrix((float)x, (float)y);
-                            canvas.ShowText(word);
-                            wordsFound++;
-                        }
-                        catch
-                        {
-                            // parola con glifi non rappresentabili nel font standard: saltata
-                        }
-                    } while (iterator.Next(PageIteratorLevel.Word));
-
-                    canvas.EndText();
+                    wordsFound += DrawWords(ocrPage, canvas, font, pageHeight, renderScale);
                 }
             }
 
@@ -105,5 +76,55 @@ public static class PdfOcrService
         }
 
         return new PdfOcrResult(pagesWithoutText.Count, wordsFound);
+    }
+
+    /// <summary>
+    /// Riconosce le parole dell'immagine e le disegna <b>invisibili</b> sul canvas
+    /// nelle loro posizioni. Condiviso con la conversione PDF/A per immagine, che
+    /// deve però usare un font incorporato.
+    /// </summary>
+    internal static int DrawInvisibleWords(TesseractEngine engine, byte[] pagePng,
+        PdfCanvas canvas, PdfFont font, float pageHeight, double renderScale)
+    {
+        using var pix = Pix.LoadFromMemory(pagePng);
+        using var ocrPage = engine.Process(pix);
+        return DrawWords(ocrPage, canvas, font, pageHeight, renderScale);
+    }
+
+    private static int DrawWords(Page ocrPage, PdfCanvas canvas, PdfFont font,
+        float pageHeight, double renderScale)
+    {
+        var drawn = 0;
+        canvas.BeginText();
+        canvas.SetTextRenderingMode(PdfCanvasConstants.TextRenderingMode.INVISIBLE);
+
+        using var iterator = ocrPage.GetIterator();
+        iterator.Begin();
+        do
+        {
+            if (!iterator.TryGetBoundingBox(PageIteratorLevel.Word, out var box))
+                continue;
+            var word = iterator.GetText(PageIteratorLevel.Word)?.Trim();
+            if (string.IsNullOrEmpty(word))
+                continue;
+
+            var x = box.X1 / renderScale;
+            var y = pageHeight - box.Y2 / renderScale;
+            var size = Math.Max(4.0, (box.Y2 - box.Y1) / renderScale);
+            try
+            {
+                canvas.SetFontAndSize(font, (float)size);
+                canvas.SetTextMatrix((float)x, (float)y);
+                canvas.ShowText(word);
+                drawn++;
+            }
+            catch
+            {
+                // parola con glifi non rappresentabili nel font: saltata
+            }
+        } while (iterator.Next(PageIteratorLevel.Word));
+
+        canvas.EndText();
+        return drawn;
     }
 }

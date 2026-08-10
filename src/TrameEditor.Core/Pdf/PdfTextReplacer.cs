@@ -235,6 +235,10 @@ public static class PdfTextReplacer
             ("segoeui", "segoeui.ttf", "segoeuib.ttf", "segoeuii.ttf", "segoeuiz.ttf"),
         ];
 
+    /// <summary>Font di sistema equivalente a <paramref name="fontName"/>, o null.
+    /// Condiviso con la conversione PDF/A, che deve incorporare i font mancanti.</summary>
+    internal static string? FindSystemFontFor(string fontName) => FindSystemFont(fontName);
+
     private static string? FindSystemFont(string fontName)
     {
         var normalized = new string(CleanFontName(fontName)

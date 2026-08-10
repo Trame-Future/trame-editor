@@ -1,0 +1,66 @@
+<Window x:Class="TrameEditor.App.PdfAWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Converti in PDF/A"
+        Width="620" Height="560" MinWidth="520" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="White">
+    <DockPanel Margin="16,12">
+        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,10">
+            Il <Bold>PDF/A</Bold> è il formato dell'archiviazione a lungo termine: tutto ciò che
+            serve a rileggere il documento fra vent'anni deve stare dentro il file.
+            Ecco che cosa abbiamo trovato in questo documento.
+        </TextBlock>
+
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <RadioButton x:Name="FaithfulChoice" Margin="0,4" IsChecked="True">
+                <TextBlock TextWrapping="Wrap">
+                    <Run FontWeight="SemiBold" Text="Conversione fedele" />
+                    <Run x:Name="FaithfulDetail" />
+                </TextBlock>
+            </RadioButton>
+            <RadioButton x:Name="RasterChoice" Margin="0,4">
+                <TextBlock TextWrapping="Wrap">
+                    <Run FontWeight="SemiBold" Text="Conversione per immagine" />
+                    <Run x:Name="RasterDetail" />
+                </TextBlock>
+            </RadioButton>
+
+            <TextBlock x:Name="LegalNote" TextWrapping="Wrap" Margin="0,10,0,0"
+                       FontSize="11" Foreground="{StaticResource TextMutedBrush}">
+                La verifica che facciamo è interna al programma: controlla i punti qui sopra sul file
+                prodotto, ma non è una validazione formale. Per un deposito a norma fai validare il
+                file con veraPDF (validatore libero e riconosciuto) prima di consegnarlo.
+            </TextBlock>
+
+            <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                <TextBlock x:Name="CountText" VerticalAlignment="Center"
+                           Foreground="{StaticResource TextMutedBrush}" FontSize="11" />
+                <Button DockPanel.Dock="Right" Content="Annulla" Width="90" Padding="0,5"
+                        Margin="8,0,0,0" IsCancel="True" />
+                <Button DockPanel.Dock="Right" Content="Converti…" Width="110" Padding="0,5"
+                        FontWeight="Bold" IsDefault="True" Click="Convert_Click" />
+            </DockPanel>
+        </StackPanel>
+
+        <ListBox x:Name="IssuesList" BorderBrush="#DDDDDD" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Focusable" Value="False" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <DockPanel Margin="2,4">
+                        <TextBlock DockPanel.Dock="Left" Text="{Binding Symbol}" FontSize="14"
+                                   Width="24" VerticalAlignment="Top"
+                                   Foreground="{Binding Accent}" />
+                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                    </DockPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</Window>

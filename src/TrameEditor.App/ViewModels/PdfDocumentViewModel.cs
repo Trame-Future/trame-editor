@@ -1081,6 +1081,115 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
     }
 
+    // ----- Conversione in PDF/A (M11) -----
+
+    /// <summary>
+    /// Converte il documento in PDF/A-2 per l'archiviazione. Prima di toccare
+    /// qualunque cosa mostra il rapporto di conformità e fa scegliere fra la
+    /// conversione fedele e quella per immagine.
+    /// </summary>
+    [RelayCommand]
+    private async Task ConvertToPdfAAsync()
+    {
+        if (!SrgbColorProfile.IsAvailable)
+        {
+            MessageBox.Show(
+                "Il profilo colore sRGB di Windows non è disponibile su questo computer: " +
+                "senza di esso non è possibile produrre un PDF/A valido.",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        string staged;
+        PdfAAnalysisReport report;
+        try
+        {
+            IsSearching = true;
+            staged = NewTempPath();
+            var pages = Pages.Select(p => new PdfPageEdit(p.OriginalIndex, p.RotationDelta)).ToList();
+            var working = _workingPath;
+            report = await Task.Run(() =>
+            {
+                PdfPageOperations.Build(working, pages, staged);
+                return PdfAAnalyzer.Analyze(staged);
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Analisi del documento non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+
+        var ocrAvailable = Directory.Exists(TessdataPath());
+        var choice = PdfAWindow.Ask(report, ocrAvailable);
+        if (choice is null)
+            return;
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = PdfFilter,
+            FileName = Path.GetFileNameWithoutExtension(FileName) + " - PDFA.pdf",
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            IsSearching = true;
+            var target = dialog.FileName;
+            var title = Path.GetFileNameWithoutExtension(FileName);
+            var renderer = _renderer;
+            var result = await Task.Run(() => choice == PdfAWindow.Choice.Fedele
+                ? PdfAConverter.ConvertFaithfully(staged, target, title)
+                : PdfAConverter.ConvertByRasterizing(staged, target,
+                    pageNumber => renderer.RenderPagePngForOcr(pageNumber - 1),
+                    PdfRenderService.OcrScale,
+                    ocrAvailable ? TessdataPath() : null, title));
+
+            ShowInfo(DescribeConversion(result, Path.GetFileName(target)));
+        }
+        catch (PdfAConversionException ex)
+        {
+            MessageBox.Show(ex.Message + "\n\nPuoi riprovare scegliendo la conversione per immagine.",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Conversione in PDF/A non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
+    private static string DescribeConversion(PdfAConversionResult result, string fileName)
+    {
+        var level = result.Level == PdfALevel.A2u ? "PDF/A-2u" : "PDF/A-2b";
+        var message = $"\"{fileName}\" salvato in {level} " +
+            $"({(result.Method == PdfAConversionMethod.Fedele ? "conversione fedele" : "conversione per immagine")}).\n\n" +
+            "Cosa è cambiato rispetto all'originale:\n" +
+            string.Join("\n", result.Changes.Select(c => $"• {c}"));
+
+        if (!result.VerificationClean)
+        {
+            var residui = result.Verification.Issues
+                .Where(i => i.Severity != PdfAIssueSeverity.Corretto)
+                .Select(i => $"• {i}");
+            message += "\n\nATTENZIONE — la verifica sul file prodotto segnala ancora:\n" +
+                string.Join("\n", residui);
+        }
+
+        return message + "\n\nLa nostra verifica è interna: per un deposito a norma fai validare " +
+            "il file con veraPDF prima di consegnarlo.";
+    }
+
     // ----- Riordino con drag & drop delle miniature (M5) -----
 
     public void MovePage(PdfPageViewModel source, PdfPageViewModel? target)
