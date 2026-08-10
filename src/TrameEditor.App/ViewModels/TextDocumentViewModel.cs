@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ICSharpCode.AvalonEdit.Document;
+using TrameEditor.Core.Documents;
 using TrameEditor.Core.TextFiles;
 
 namespace TrameEditor.App.ViewModels;
@@ -22,14 +23,45 @@ public partial class TextDocumentViewModel : DocumentTabViewModel
     [NotifyPropertyChangedFor(nameof(PreviewVisible))]
     private bool _showPreview = true;
 
+    /// <summary>L'assistente AI locale, lo stesso dei PDF: qui cita le righe
+    /// invece delle pagine e legge il testo dell'editor, non il file su disco —
+    /// così risponde su quello che hai davanti, comprese le modifiche non salvate.</summary>
+    public DocumentQaViewModel Qa { get; }
+
+    [ObservableProperty]
+    private bool _askMode;
+
+    /// <summary>Chiesta una riga (clic su una citazione): la vista ci porta il cursore.</summary>
+    public event EventHandler<int>? LineRequested;
+
     private TextDocumentViewModel()
     {
         EditorDocument.TextChanged += (_, _) =>
         {
             if (!_suppressDirtyTracking)
                 IsDirty = true;
+            _qaContentChanged = true;
         };
         PropertyChanged += OnSelfPropertyChanged;
+
+        Qa = new DocumentQaViewModel(() => DocumentTextReader.ReadText(EditorDocument.Text));
+        Qa.ReferenceRequested += line => LineRequested?.Invoke(this, line);
+    }
+
+    private bool _qaContentChanged;
+
+    partial void OnAskModeChanged(bool value)
+    {
+        if (!value)
+            return;
+        // Il testo può essere cambiato da quando l'assistente l'ha letto.
+        if (_qaContentChanged)
+        {
+            Qa.Invalidate(reinitializeNow: false);
+            _qaContentChanged = false;
+        }
+        if (!Qa.Ready && !Qa.Busy)
+            _ = Qa.InitializeAsync();
     }
 
     private void OnSelfPropertyChanged(object? sender, PropertyChangedEventArgs e)

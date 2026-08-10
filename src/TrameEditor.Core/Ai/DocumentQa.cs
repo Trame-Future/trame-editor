@@ -1,27 +1,28 @@
-using TrameEditor.Core.Pdf;
+using TrameEditor.Core.Documents;
 
 namespace TrameEditor.Core.Ai;
 
-/// <summary>Un blocco di testo del documento, con la pagina di provenienza.</summary>
-public sealed record DocChunk(int Page, string Text);
+/// <summary>Un blocco di testo del documento, col punto di provenienza:
+/// la pagina in un PDF, la riga in un file di testo o Markdown.</summary>
+public sealed record DocChunk(int Reference, string Text);
 
-/// <summary>Spezza il testo del documento in blocchi per pagina; le pagine
-/// lunghe vengono divise ai confini di riga.</summary>
+/// <summary>Spezza il documento in blocchi seguendo le sue sezioni naturali
+/// (pagine o gruppi di righe); le sezioni lunghe vengono divise ai confini di riga.</summary>
 public static class DocumentChunker
 {
     public const int MaxChunkChars = 1500;
 
-    public static List<DocChunk> Chunk(IReadOnlyList<(int Page, string Text)> pageTexts)
+    public static List<DocChunk> Chunk(IReadOnlyList<DocumentSection> sections)
     {
         var chunks = new List<DocChunk>();
-        foreach (var (page, text) in pageTexts)
+        foreach (var section in sections)
         {
-            var trimmed = text.Trim();
+            var trimmed = section.Text.Trim();
             if (trimmed.Length == 0)
                 continue;
             if (trimmed.Length <= MaxChunkChars)
             {
-                chunks.Add(new DocChunk(page, trimmed));
+                chunks.Add(new DocChunk(section.Reference, trimmed));
                 continue;
             }
             var current = new System.Text.StringBuilder();
@@ -29,13 +30,13 @@ public static class DocumentChunker
             {
                 if (current.Length > 0 && current.Length + line.Length + 1 > MaxChunkChars)
                 {
-                    chunks.Add(new DocChunk(page, current.ToString().Trim()));
+                    chunks.Add(new DocChunk(section.Reference, current.ToString().Trim()));
                     current.Clear();
                 }
                 current.AppendLine(line);
             }
             if (current.Length > 0)
-                chunks.Add(new DocChunk(page, current.ToString().Trim()));
+                chunks.Add(new DocChunk(section.Reference, current.ToString().Trim()));
         }
         return chunks;
     }
@@ -101,20 +102,22 @@ public static class EmbeddingMath
 
 public static class QaPromptBuilder
 {
-    public static string BuildSystemPrompt() =>
+    public static string BuildSystemPrompt(DocumentUnit unit = DocumentUnit.Pagina) =>
         "Sei l'assistente documenti di TrameEditor. Rispondi in italiano, in modo breve e preciso, " +
         "usando SOLO le informazioni presenti nel CONTESTO fornito. " +
-        "Cita sempre la pagina da cui prendi ogni informazione nel formato [pag. N]. " +
+        $"Cita sempre la {unit.Label()} da cui prendi ogni informazione nel formato " +
+        $"[{unit.ShortLabel()} N]. " +
         "Se la risposta non è nel contesto, di' chiaramente: \"Non lo trovo nel documento.\" " +
         "Non inventare mai dati, importi o date.";
 
-    public static string BuildUserPrompt(string question, IReadOnlyList<DocChunk> context)
+    public static string BuildUserPrompt(string question, IReadOnlyList<DocChunk> context,
+        DocumentUnit unit = DocumentUnit.Pagina)
     {
         var builder = new System.Text.StringBuilder();
         builder.AppendLine("CONTESTO:");
         foreach (var chunk in context)
         {
-            builder.AppendLine($"[pag. {chunk.Page}]");
+            builder.AppendLine($"[{unit.ShortLabel()} {chunk.Reference}]");
             builder.AppendLine(chunk.Text);
             builder.AppendLine();
         }
@@ -140,6 +143,9 @@ public sealed class QaSession
     private List<float[]>? _vectors;
     private int _totalChars;
 
+    /// <summary>Con che cosa si citano le fonti in questo documento.</summary>
+    public DocumentUnit Unit { get; private set; } = DocumentUnit.Pagina;
+
     public QaSession(OllamaClient client, string chatModel, string? embeddingModel)
     {
         _client = client;
@@ -147,19 +153,13 @@ public sealed class QaSession
         _embeddingModel = embeddingModel;
     }
 
-    public async Task InitializeAsync(string pdfPath, IProgress<string>? status,
+    /// <summary>Indicizza un documento già letto: va bene un PDF come un file di
+    /// testo, cambia solo come si citano le fonti.</summary>
+    public async Task InitializeAsync(DocumentContent content, IProgress<string>? status,
         CancellationToken cancellationToken = default)
     {
-        var pageTexts = new List<(int, string)>();
-        using (var inspector = new PdfTextInspector(pdfPath))
-        {
-            for (var page = 1; page <= inspector.PageCount; page++)
-            {
-                var text = string.Join("\n", inspector.GetLines(page).Select(l => l.Text));
-                pageTexts.Add((page, text));
-            }
-        }
-        _chunks = DocumentChunker.Chunk(pageTexts);
+        Unit = content.Unit;
+        _chunks = DocumentChunker.Chunk(content.Sections);
         _totalChars = _chunks.Sum(c => c.Text.Length);
         if (_chunks.Count == 0)
             throw new InvalidOperationException(
@@ -185,7 +185,7 @@ public sealed class QaSession
         }
     }
 
-    public async Task<(IReadOnlyList<DocChunk> Context, IReadOnlyList<int> Pages)> SelectContextAsync(
+    public async Task<(IReadOnlyList<DocChunk> Context, IReadOnlyList<int> References)> SelectContextAsync(
         string question, CancellationToken cancellationToken = default)
     {
         IReadOnlyList<DocChunk> context;
@@ -200,7 +200,7 @@ public sealed class QaSession
                 .Select((chunk, i) => (Chunk: chunk, Score: EmbeddingMath.Cosine(_vectors[i], questionVector)))
                 .OrderByDescending(x => x.Score)
                 .Take(TopK)
-                .OrderBy(x => x.Chunk.Page)
+                .OrderBy(x => x.Chunk.Reference)
                 .Select(x => x.Chunk)
                 .ToList();
         }
@@ -208,11 +208,11 @@ public sealed class QaSession
         {
             context = LexicalRetriever.TopK(_chunks, question, TopK);
         }
-        return (context, context.Select(c => c.Page).Distinct().OrderBy(p => p).ToList());
+        return (context, context.Select(c => c.Reference).Distinct().Order().ToList());
     }
 
     public IAsyncEnumerable<string> AskStreamAsync(string question, IReadOnlyList<DocChunk> context,
         CancellationToken cancellationToken = default) =>
-        _client.ChatStreamAsync(_chatModel, QaPromptBuilder.BuildSystemPrompt(),
-            QaPromptBuilder.BuildUserPrompt(question, context), cancellationToken);
+        _client.ChatStreamAsync(_chatModel, QaPromptBuilder.BuildSystemPrompt(Unit),
+            QaPromptBuilder.BuildUserPrompt(question, context, Unit), cancellationToken);
 }

@@ -7,10 +7,22 @@ namespace TrameEditor.App.Views;
 
 public partial class PdfViewerView : UserControl
 {
+    private PdfDocumentViewModel? _boundDocument;
+
     public PdfViewerView()
     {
         InitializeComponent();
+        DataContextChanged += (_, _) =>
+        {
+            if (_boundDocument is not null)
+                _boundDocument.PageRequested -= OnPageRequested;
+            _boundDocument = DataContext as PdfDocumentViewModel;
+            if (_boundDocument is not null)
+                _boundDocument.PageRequested += OnPageRequested;
+        };
     }
+
+    private void OnPageRequested(object? sender, int pageNumber) => GoToPage(pageNumber);
 
     private async void Page_Loaded(object sender, RoutedEventArgs e)
     {
@@ -96,17 +108,10 @@ public partial class PdfViewerView : UserControl
         await vm.HandlePageClickAsync(page, position.X / vm.Zoom, position.Y / vm.Zoom);
     }
 
-    private void QaSettings_Click(object sender, RoutedEventArgs e)
+    /// <summary>Clic su una citazione dell'assistente: si scorre alla pagina.</summary>
+    private void GoToPage(int pageNumber)
     {
-        SettingsWindow.ShowEditor();
-        if (DataContext is PdfDocumentViewModel vm)
-            vm.RetryQaCommand.Execute(null);
-    }
-
-    private void QaSource_Click(object sender, RoutedEventArgs e)
-    {
-        if (((FrameworkElement)sender).DataContext is not int pageNumber ||
-            DataContext is not PdfDocumentViewModel vm)
+        if (DataContext is not PdfDocumentViewModel vm)
             return;
         var page = vm.Pages.FirstOrDefault(p => p.OriginalIndex + 1 == pageNumber);
         if (page is not null)

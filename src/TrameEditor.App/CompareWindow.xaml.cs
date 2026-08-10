@@ -3,7 +3,7 @@ using System.Net;
 using System.Text;
 using System.Windows;
 using Microsoft.Win32;
-using TrameEditor.Core.Pdf;
+using TrameEditor.Core.Documents;
 
 namespace TrameEditor.App;
 
@@ -18,7 +18,7 @@ public partial class CompareWindow : Window
 
     private readonly string _leftPath;
     private readonly string _rightPath;
-    private PdfCompareResult? _result;
+    private CompareResult? _result;
 
     public CompareWindow(string leftPath, string rightPath)
     {
@@ -34,12 +34,15 @@ public partial class CompareWindow : Window
     {
         try
         {
-            _result = await Task.Run(() => PdfComparer.Compare(_leftPath, _rightPath));
-            DiffList.ItemsSource = BuildDisplayList(_result.Entries);
+            _result = await Task.Run(() => DocumentComparer.Compare(_leftPath, _rightPath));
+            DiffList.ItemsSource = BuildDisplayList(_result.Entries, _result.ReferenceLabel);
+            var mixed = _result.MixedTypes
+                ? " — i due documenti sono di tipo diverso: i riferimenti seguono il primo"
+                : string.Empty;
             SummaryText.Text = _result.AreIdentical
                 ? "I due documenti hanno lo stesso testo."
                 : $"{_result.AddedCount} righe aggiunte, {_result.RemovedCount} rimosse " +
-                  "(confronto sul testo, non sulla grafica)";
+                  "(confronto sul testo, non sulla grafica)" + mixed;
             ReportButton.IsEnabled = true;
         }
         catch (Exception ex)
@@ -52,7 +55,7 @@ public partial class CompareWindow : Window
 
     /// <summary>Comprimi le lunghe sequenze identiche: 2 righe di contesto
     /// attorno alle differenze, il resto diventa un separatore.</summary>
-    private static List<DisplayEntry> BuildDisplayList(IReadOnlyList<PdfDiffEntry> entries)
+    private static List<DisplayEntry> BuildDisplayList(IReadOnlyList<DiffEntry> entries, string label)
     {
         const int context = 2;
         var keep = new bool[entries.Count];
@@ -85,12 +88,9 @@ public partial class CompareWindow : Window
                 DiffKind.Removed => "− ",
                 _ => "  ",
             };
-            var pages = entry.Kind switch
-            {
-                DiffKind.Added => $"pag. {entry.RightPage}",
-                DiffKind.Removed => $"pag. {entry.LeftPage}",
-                _ => $"pag. {entry.LeftPage}",
-            };
+            var pages = entry.Kind == DiffKind.Added
+                ? $"{label} {entry.RightRef}"
+                : $"{label} {entry.LeftRef}";
             display.Add(new DisplayEntry
             {
                 Kind = entry.Kind.ToString(),
@@ -130,19 +130,19 @@ public partial class CompareWindow : Window
     private string BuildHtmlReport()
     {
         var body = new StringBuilder();
-        body.AppendLine($"<h1>Confronto PDF</h1><p><b>−</b> {WebUtility.HtmlEncode(Path.GetFileName(_leftPath))} " +
+        body.AppendLine($"<h1>Confronto documenti</h1><p><b>−</b> {WebUtility.HtmlEncode(Path.GetFileName(_leftPath))} " +
             $"&nbsp;→&nbsp; <b>+</b> {WebUtility.HtmlEncode(Path.GetFileName(_rightPath))}</p>");
         body.AppendLine($"<p>{_result!.AddedCount} righe aggiunte, {_result.RemovedCount} rimosse — " +
             $"rapporto generato da TrameEditor (Trame Future)</p><div class=\"diff\">");
         foreach (var entry in _result.Entries)
         {
             var cls = entry.Kind.ToString().ToLowerInvariant();
-            var page = entry.Kind == DiffKind.Added ? entry.RightPage : entry.LeftPage;
-            body.AppendLine($"<div class=\"{cls}\"><span class=\"pg\">pag. {page}</span>" +
+            var reference = entry.Kind == DiffKind.Added ? entry.RightRef : entry.LeftRef;
+            body.AppendLine($"<div class=\"{cls}\"><span class=\"pg\">{_result.ReferenceLabel} {reference}</span>" +
                 WebUtility.HtmlEncode(entry.Text) + "</div>");
         }
         body.AppendLine("</div>");
-        return "<!DOCTYPE html><html lang=\"it\"><head><meta charset=\"utf-8\"><title>Confronto PDF</title><style>" +
+        return "<!DOCTYPE html><html lang=\"it\"><head><meta charset=\"utf-8\"><title>Confronto documenti</title><style>" +
             "body{font-family:'Segoe UI',sans-serif;max-width:60rem;margin:0 auto;padding:1.5rem}" +
             ".diff div{font-family:Consolas,monospace;font-size:13px;padding:1px 6px;white-space:pre-wrap}" +
             ".added{background:#e7f6ea;color:#1b7a2f}.removed{background:#fbeae8;color:#b02a22}" +

@@ -152,9 +152,14 @@ funzionare esattamente come prima.
 
 ## Chiedi al documento 💬 (AI locale)
 
-Il pulsante **"💬 Chiedi"** apre un assistente che risponde a domande sul PDF aperto:
+Il pulsante **"💬 Chiedi"** apre un assistente che risponde a domande sul documento aperto:
 *"quanto devo pagare e entro quando?"*, *"qual è la durata del contratto?"*…
 L'AI gira **interamente sul tuo computer**: nessun documento viene caricato da nessuna parte.
+
+Funziona su **PDF, testo e Markdown**. Cambia solo come cita le fonti: nei PDF indica la
+**pagina**, nei file di testo e Markdown la **riga** — e in entrambi i casi il pulsantino della
+citazione ti porta esattamente lì. Nei documenti di testo l'assistente legge quello che hai
+nell'editor, comprese le modifiche non ancora salvate.
 
 **Cosa serve (questa è l'unica funzione con dei requisiti):**
 
@@ -184,18 +189,21 @@ da cambiare solo se gira su un'altra porta o su un altro PC della rete.
 
 **Come funziona:**
 
-- Ogni risposta indica le **pagine di provenienza**: clicca "pag. N" per andarci.
+- Ogni risposta indica il **punto di provenienza**: clicca "pag. N" (o "riga N") per andarci.
 - Regole d'onestà: l'assistente usa **solo il contenuto del documento**, e se non
   trova la risposta lo dice. Ma può comunque sbagliare: **verifica sempre sul documento**.
 - Le scansioni vanno prima passate con l'**OCR**.
 
-## Confronta due PDF ⇄
+## Confronta due documenti ⇄
 
-**Ribbon → Strumenti → Confronta PDF**: scegli due versioni di un documento e vedi
-riga per riga cosa è stato **aggiunto** (verde) e **rimosso** (rosso), con il numero
-di pagina. Le parti identiche lunghe vengono compresse in "⋯ N righe identiche ⋯".
-Puoi salvare un **rapporto HTML** da allegare o archiviare.
-Il confronto riguarda il testo, non la grafica.
+**Ribbon → Strumenti → Confronta documenti**: scegli due versioni e vedi riga per riga
+cosa è stato **aggiunto** (verde) e **rimosso** (rosso). Funziona su **PDF, testo e
+Markdown**, e anche fra tipi diversi (per esempio un PDF contro il suo sorgente .md):
+il confronto guarda il testo, non il formato — e non guarda la grafica.
+
+I riferimenti seguono il tipo di documento: **pagina** per i PDF, **riga** per i file di
+testo. Le parti identiche lunghe vengono compresse in "⋯ N righe identiche ⋯", e puoi
+salvare un **rapporto HTML** da allegare o archiviare.
 
 ## Ricette (elaborazione in serie) ⚙
 

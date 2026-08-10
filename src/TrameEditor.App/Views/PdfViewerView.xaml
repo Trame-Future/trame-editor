@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:TrameEditor.App.ViewModels"
-             xmlns:controls="clr-namespace:TrameEditor.App.Controls">
+             xmlns:controls="clr-namespace:TrameEditor.App.Controls"
+             xmlns:views="clr-namespace:TrameEditor.App.Views">
     <DockPanel>
         <Border DockPanel.Dock="Top" Style="{StaticResource ToolbarBand}">
             <DockPanel LastChildFill="False">
@@ -424,84 +425,11 @@
                 </DockPanel>
             </Border>
 
-            <!-- Chiedi al documento (AI locale) -->
-            <Border Grid.Column="4" Width="330" Background="White"
-                    BorderThickness="1,0,0,0" BorderBrush="#DDDDDD"
-                    Visibility="{Binding AskMode, Converter={StaticResource BoolToVisibility}}">
-                <DockPanel Margin="10,8">
-                    <TextBlock DockPanel.Dock="Top" Text="💬 Chiedi al documento" FontWeight="Bold"
-                               FontSize="14" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,4" />
-                    <TextBlock DockPanel.Dock="Top" Text="{Binding QaStatus}" TextWrapping="Wrap"
-                               FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,6" />
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6"
-                                Visibility="{Binding QaUnavailable, Converter={StaticResource BoolToVisibility}}">
-                        <Button Content="Impostazioni AI…" Padding="10,3" FontWeight="SemiBold"
-                                Click="QaSettings_Click" />
-                        <Button Content="Riprova" Padding="10,3" Margin="6,0,0,0"
-                                Command="{Binding RetryQaCommand}" />
-                    </StackPanel>
-                    <StackPanel DockPanel.Dock="Bottom">
-                        <DockPanel Margin="0,6,0,0">
-                            <Button DockPanel.Dock="Right" Content="Invia" Padding="10,4" Margin="6,0,0,0"
-                                    FontWeight="Bold" Command="{Binding AskCommand}" />
-                            <TextBox Text="{Binding QaInput, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="4,4" TextWrapping="Wrap" MaxHeight="70"
-                                     VerticalScrollBarVisibility="Auto"
-                                     IsEnabled="{Binding QaReady}">
-                                <TextBox.InputBindings>
-                                    <KeyBinding Key="Enter" Command="{Binding AskCommand}" />
-                                </TextBox.InputBindings>
-                            </TextBox>
-                        </DockPanel>
-                        <TextBlock Margin="0,5,0,0" FontSize="10" TextWrapping="Wrap"
-                                   Foreground="{StaticResource TextMutedBrush}"
-                                   Text="L'AI locale può sbagliare: verifica sempre sul documento. Nessun dato lascia il tuo computer." />
-                    </StackPanel>
-                    <ScrollViewer x:Name="QaScroll" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding QaMessages}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:QaMessageViewModel}">
-                                    <Border Margin="0,3" Padding="8,6" CornerRadius="8" MaxWidth="290">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="#F2F2F0" />
-                                                <Setter Property="HorizontalAlignment" Value="Left" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsUser}" Value="True">
-                                                        <Setter Property="Background" Value="#DCE8F8" />
-                                                        <Setter Property="HorizontalAlignment" Value="Right" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="12" />
-                                            <ItemsControl ItemsSource="{Binding SourcePages}" Margin="0,4,0,0">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <WrapPanel />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Button Margin="0,0,4,0" Padding="5,1" FontSize="10"
-                                                                Cursor="Hand" Click="QaSource_Click"
-                                                                ToolTip="Vai alla pagina">
-                                                            <!-- TextBlock: su Button lo StringFormat del binding
-                                                                 non si applica a Content -->
-                                                            <TextBlock Text="{Binding StringFormat='pag. {0}'}" />
-                                                        </Button>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </DockPanel>
-            </Border>
+            <!-- Chiedi al documento (AI locale): pannello condiviso con l'editor di testo -->
+            <views:AskPanel Grid.Column="4" Width="330" DataContext="{Binding Qa}"
+                            Visibility="{Binding DataContext.AskMode, RelativeSource={RelativeSource AncestorType=UserControl},
+                                         Converter={StaticResource BoolToVisibility}}" />
+
 
             <!-- Attesa: pianeta Trame Future in rotazione durante le operazioni lunghe -->
             <Border Grid.Column="0" Grid.ColumnSpan="5" Background="#B8FFFFFF"

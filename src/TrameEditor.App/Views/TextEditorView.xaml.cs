@@ -73,15 +73,28 @@ public partial class TextEditorView : UserControl
         {
             _vm.PropertyChanged -= OnVmPropertyChanged;
             _vm.PrintRequested -= OnPrintRequested;
+            _vm.LineRequested -= OnLineRequested;
         }
         _vm = DataContext as TextDocumentViewModel;
         if (_vm is not null)
         {
             _vm.PropertyChanged += OnVmPropertyChanged;
             _vm.PrintRequested += OnPrintRequested;
+            _vm.LineRequested += OnLineRequested;
         }
         ApplyHighlighting();
         UpdatePreviewLayout();
+    }
+
+    /// <summary>Clic su una citazione dell'assistente: il cursore va a quella riga
+    /// e la riga viene portata in vista.</summary>
+    private void OnLineRequested(object? sender, int line)
+    {
+        var target = Math.Clamp(line, 1, Editor.Document.LineCount);
+        var documentLine = Editor.Document.GetLineByNumber(target);
+        Editor.CaretOffset = documentLine.Offset;
+        Editor.ScrollToLine(target);
+        Editor.Focus();
     }
 
     /// <summary>Stampa: per il Markdown con anteprima attiva usa la resa HTML

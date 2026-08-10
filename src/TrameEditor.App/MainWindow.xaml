@@ -54,6 +54,9 @@
                     <fluent:MenuItem Header="Unisci PDF…"
                                      Command="{Binding MergePdfsCommand}" />
                     <Separator />
+                    <fluent:MenuItem Header="Impostazioni…" Click="Settings_Click"
+                                     ToolTip="Assistente AI e validatore PDF/A: requisiti, installazione, percorsi" />
+                    <Separator />
                     <fluent:MenuItem Header="Chiudi scheda" InputGestureText="Ctrl+W"
                                      Command="{Binding CloseActiveDocumentCommand}" />
                     <fluent:MenuItem Header="Guida" InputGestureText="F1" Command="Help" />
@@ -177,9 +180,9 @@
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE8A4;" />
                         </fluent:Button.Icon>
                     </fluent:Button>
-                    <fluent:Button Header="Confronta PDF" Size="Middle" Focusable="False"
-                                   ToolTip="Confronta il testo di due versioni di un PDF (aggiunte e rimozioni)"
-                                   Command="{Binding ComparePdfsCommand}">
+                    <fluent:Button Header="Confronta documenti" Size="Middle" Focusable="False"
+                                   ToolTip="Confronta il testo di due versioni di un documento (PDF, testo o Markdown, anche misti)"
+                                   Command="{Binding CompareDocumentsCommand}">
                         <fluent:Button.Icon>
                             <TextBlock FontSize="13" Text="⇄" />
                         </fluent:Button.Icon>
@@ -192,7 +195,7 @@
                         </fluent:Button.Icon>
                     </fluent:Button>
                     <fluent:Button Header="Impostazioni" Size="Middle" Focusable="False"
-                                   ToolTip="Assistente AI: connessione, requisiti del PC, installazione automatica"
+                                   ToolTip="Componenti opzionali: assistente AI (Ollama) e validatore PDF/A (veraPDF) — requisiti, installazione automatica, percorsi"
                                    Click="Settings_Click">
                         <fluent:Button.Icon>
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE713;" />

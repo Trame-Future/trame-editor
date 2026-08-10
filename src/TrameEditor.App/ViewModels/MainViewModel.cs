@@ -379,20 +379,25 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Confronta due documenti: PDF, testo o Markdown, anche misti —
+    /// il confronto guarda il testo, non il formato.</summary>
     [RelayCommand]
-    private void ComparePdfs()
+    private void CompareDocuments()
     {
+        const string filter = "Documenti confrontabili (*.pdf;*.txt;*.md)|*.pdf;*.txt;*.md;*.markdown;*.log;*.csv" +
+            "|PDF (*.pdf)|*.pdf|Testo e Markdown (*.txt;*.md)|*.txt;*.md;*.markdown|Tutti i file|*.*";
+
         var first = new OpenFileDialog
         {
-            Filter = "PDF (*.pdf)|*.pdf",
+            Filter = filter,
             Title = "Scegli il PRIMO documento (la versione vecchia)",
-            FileName = (SelectedDocument as PdfDocumentViewModel)?.FilePath ?? string.Empty,
+            FileName = SelectedDocument?.FilePath ?? string.Empty,
         };
         if (first.ShowDialog() != true)
             return;
         var second = new OpenFileDialog
         {
-            Filter = "PDF (*.pdf)|*.pdf",
+            Filter = filter,
             Title = "Scegli il SECONDO documento (la versione nuova)",
         };
         if (second.ShowDialog() != true)

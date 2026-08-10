@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using TrameEditor.App.Services;
 using TrameEditor.Core.Ai;
+using TrameEditor.Core.Documents;
 using TrameEditor.Core.Ocr;
 using TrameEditor.Core.Pdf;
 
@@ -93,7 +94,14 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             _tempFiles.Add(workingPath); // copia decifrata: da ripulire alla chiusura
         for (var i = 0; i < renderer.PageCount; i++)
             Pages.Add(new PdfPageViewModel(renderer, i));
+
+        Qa = new DocumentQaViewModel(() => DocumentTextReader.Read(_workingPath));
+        Qa.ReferenceRequested += page => PageRequested?.Invoke(this, page);
     }
+
+    /// <summary>Chiesta una pagina (clic su una citazione dell'assistente): la
+    /// vista scorre fin lì.</summary>
+    public event EventHandler<int>? PageRequested;
 
     public static PdfDocumentViewModel CreateFromFile(string path) =>
         CreateFromFile(path, path);
@@ -791,132 +799,22 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
     }
 
-    // ----- Chiedi al documento (AI locale, v2.0) -----
+    // ----- Chiedi al documento (AI locale, v2.0; pannello condiviso col testo dalla 2.4) -----
 
     [ObservableProperty]
     private bool _askMode;
 
-    [ObservableProperty]
-    private string _qaStatus = string.Empty;
-
-    [ObservableProperty]
-    private string _qaInput = string.Empty;
-
-    [ObservableProperty]
-    private bool _qaBusy;
-
-    [ObservableProperty]
-    private bool _qaReady;
-
-    [ObservableProperty]
-    private bool _qaUnavailable;
-
-    public ObservableCollection<QaMessageViewModel> QaMessages { get; } = [];
-
-    private QaSession? _qaSession;
+    /// <summary>Il pannello dell'assistente legge le pagine della copia di lavoro:
+    /// così vede anche le modifiche non ancora salvate (OCR, testo, annotazioni).</summary>
+    public DocumentQaViewModel Qa { get; }
 
     partial void OnAskModeChanged(bool value)
     {
-        if (value && !QaReady && !QaBusy)
-            _ = InitializeQaAsync();
+        if (value && !Qa.Ready && !Qa.Busy)
+            _ = Qa.InitializeAsync();
     }
 
-    [RelayCommand]
-    private Task RetryQa() => InitializeQaAsync();
-
-    private async Task InitializeQaAsync()
-    {
-        QaUnavailable = false;
-        QaReady = false;
-        QaBusy = true;
-        try
-        {
-            var endpoint = TrameEditor.Core.Session.AppSettings.Load().OllamaEndpoint;
-            QaStatus = $"cerco Ollama su {endpoint}…";
-            var client = new OllamaClient(endpoint);
-            IReadOnlyList<string> models;
-            try
-            {
-                models = await client.ListModelsAsync();
-            }
-            catch
-            {
-                QaUnavailable = true;
-                QaStatus = $"Ollama non trovato su {endpoint}.\n\n" +
-                    "Apri \"Impostazioni AI\" qui sotto: verifica se il tuo PC ha i requisiti " +
-                    "e installa tutto automaticamente con un click. Poi premi Riprova.";
-                return;
-            }
-
-            var chatModel = OllamaModels.PickChatModel(models);
-            if (chatModel is null)
-            {
-                QaUnavailable = true;
-                QaStatus = "Ollama è attivo ma manca un modello di chat. " +
-                    "Apri \"Impostazioni AI\" qui sotto e usa l'installazione automatica. Poi premi Riprova.";
-                return;
-            }
-
-            var progress = new Progress<string>(s => QaStatus = s);
-            var session = new QaSession(new OllamaClient(endpoint), chatModel,
-                OllamaModels.PickEmbeddingModel(models));
-            var working = _workingPath;
-            await Task.Run(() => session.InitializeAsync(working, progress));
-            _qaSession = session;
-            QaReady = true;
-            QaStatus = $"pronto — modello locale: {chatModel}";
-        }
-        catch (Exception ex)
-        {
-            QaUnavailable = true;
-            QaStatus = $"Assistente non disponibile: {ex.Message}";
-        }
-        finally
-        {
-            QaBusy = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task AskAsync()
-    {
-        var question = QaInput.Trim();
-        if (question.Length == 0 || !QaReady || QaBusy || _qaSession is null)
-            return;
-
-        QaInput = string.Empty;
-        QaMessages.Add(new QaMessageViewModel { IsUser = true, Text = question });
-        var answer = new QaMessageViewModel { IsUser = false, Text = string.Empty };
-        QaMessages.Add(answer);
-        QaBusy = true;
-        try
-        {
-            var session = _qaSession;
-            var (context, pages) = await session.SelectContextAsync(question);
-            foreach (var page in pages)
-                answer.SourcePages.Add(page);
-            await foreach (var delta in session.AskStreamAsync(question, context))
-                answer.Text += delta;
-            if (answer.Text.Length == 0)
-                answer.Text = "(nessuna risposta dal modello)";
-        }
-        catch (Exception ex)
-        {
-            answer.Text = $"Errore: {ex.Message}";
-        }
-        finally
-        {
-            QaBusy = false;
-        }
-    }
-
-    private void ResetQa()
-    {
-        _qaSession = null;
-        QaReady = false;
-        if (AskMode)
-            _ = InitializeQaAsync();
-    }
+    private void ResetQa() => Qa.Invalidate(reinitializeNow: AskMode);
 
     // ----- Anonimizzazione (M8) -----
 
