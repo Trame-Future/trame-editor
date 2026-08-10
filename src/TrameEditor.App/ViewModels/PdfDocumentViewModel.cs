@@ -1151,7 +1151,14 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
                     PdfRenderService.OcrScale,
                     ocrAvailable ? TessdataPath() : null, title));
 
-            ShowInfo(DescribeConversion(result, Path.GetFileName(target)));
+            // Se l'utente ha installato veraPDF, la parola definitiva è la sua.
+            var veraPdfPath = VeraPdfValidator.FindExecutable(
+                TrameEditor.Core.Session.AppSettings.Load().VeraPdfPath);
+            var validation = veraPdfPath is null
+                ? null
+                : await Task.Run(() => VeraPdfValidator.Validate(veraPdfPath, target, result.Level));
+
+            ShowInfo(DescribeConversion(result, Path.GetFileName(target), validation));
         }
         catch (PdfAConversionException ex)
         {
@@ -1169,7 +1176,8 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
     }
 
-    private static string DescribeConversion(PdfAConversionResult result, string fileName)
+    private static string DescribeConversion(PdfAConversionResult result, string fileName,
+        VeraPdfReport? validation)
     {
         var level = result.Level == PdfALevel.A2u ? "PDF/A-2u" : "PDF/A-2b";
         var message = $"\"{fileName}\" salvato in {level} " +
@@ -1186,8 +1194,24 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
                 string.Join("\n", residui);
         }
 
-        return message + "\n\nLa nostra verifica è interna: per un deposito a norma fai validare " +
-            "il file con veraPDF prima di consegnarlo.";
+        if (validation is null)
+        {
+            return message + "\n\nLa nostra verifica è interna: per un deposito a norma fai validare " +
+                "il file con veraPDF. Puoi installarlo da Strumenti → Impostazioni.";
+        }
+
+        if (!validation.DidRun)
+            return message + $"\n\nValidazione veraPDF non eseguita: {validation.Error}";
+
+        if (validation.IsCompliant)
+            return message + $"\n\n✓ VALIDAZIONE FORMALE SUPERATA: veraPDF certifica il file come " +
+                $"PDF/A-{validation.Flavour}.";
+
+        var motivi = validation.Failures.Take(8).Select(f => $"• {f}");
+        return message + $"\n\n✗ VALIDAZIONE FORMALE NON SUPERATA (PDF/A-{validation.Flavour}). " +
+            "veraPDF segnala:\n" + string.Join("\n", motivi) +
+            (validation.Failures.Count > 8 ? $"\n… e altre {validation.Failures.Count - 8} regole." : "") +
+            "\n\nSegnalalo: ogni caso del genere per noi diventa un test.";
     }
 
     // ----- Riordino con drag & drop delle miniature (M5) -----

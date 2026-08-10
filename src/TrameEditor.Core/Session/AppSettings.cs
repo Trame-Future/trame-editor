@@ -15,6 +15,10 @@ public sealed class AppSettings
     /// Da cambiare solo se Ollama gira su porta o host diversi.</summary>
     public string OllamaEndpoint { get; set; } = OllamaClient.DefaultBaseUrl;
 
+    /// <summary>Percorso di <c>verapdf.bat</c> per la validazione formale PDF/A.
+    /// Vuoto finché veraPDF non viene installato: è un componente opzionale.</summary>
+    public string VeraPdfPath { get; set; } = string.Empty;
+
     public static string DefaultPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "TrameEditor", "impostazioni.json");

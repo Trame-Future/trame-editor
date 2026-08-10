@@ -133,6 +133,16 @@ public static class PdfAConverter
         for (var pageNumber = 1; pageNumber <= document.GetNumberOfPages(); pageNumber++)
             CleanAnnotations(document.GetPage(pageNumber), changes);
 
+        // I colori CMYK non sarebbero definiti sotto un profilo di destinazione sRGB.
+        var colors = PdfCmykConverter.Convert(document);
+        if (colors.ColorsConverted > 0 || colors.ImagesConverted > 0)
+        {
+            var what = colors.ImagesConverted == 0
+                ? $"{colors.ColorsConverted} colori CMYK"
+                : $"{colors.ColorsConverted} colori e {colors.ImagesConverted} immagini CMYK";
+            changes.Add($"{what} convertiti in sRGB — {colors.SourceDescription}");
+        }
+
         catalog.SetModified();
     }
 

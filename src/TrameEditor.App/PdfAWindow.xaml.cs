@@ -72,6 +72,10 @@ public partial class PdfAWindow : Window
             FaithfulDetail.Text = "— non possibile su questo documento: vedi i punti in rosso qui sopra.";
         }
 
+        if (VeraPdfValidator.IsAvailable(TrameEditor.Core.Session.AppSettings.Load().VeraPdfPath))
+            LegalNote.Text = "Al termine il file prodotto verrà validato con veraPDF, il validatore " +
+                "formale che hai installato: il suo verdetto è quello che conta per un deposito a norma.";
+
         RasterDetail.Text = ocrAvailable
             ? "— ogni pagina diventa un'immagine con sotto il testo riconosciuto dall'OCR: " +
               "la conformità è garantita, ma il testo originale è perduto e il file pesa di più."

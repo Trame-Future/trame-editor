@@ -23,6 +23,10 @@ internal sealed class PdfPageScan
 
     public bool UsesCmyk { get; private set; }
 
+    /// <summary>Immagini scritte dentro il flusso stesso: non sono oggetti a sé e
+    /// non possiamo convertirle come le altre.</summary>
+    public bool UsesCmykInlineImage { get; private set; }
+
     /// <summary>Caratteri (code point) scritti con questo font nella pagina.</summary>
     public IReadOnlyCollection<int> CharactersUsedBy(PdfDictionary font) =>
         _charactersByFont.TryGetValue(KeyOf(font), out var characters) ? characters : [];
@@ -60,14 +64,37 @@ internal sealed class PdfPageScan
         }
     }
 
+    private void NoteCmykInlineImage()
+    {
+        UsesCmyk = true;
+        UsesCmykInlineImage = true;
+    }
+
     private sealed class ColorAndTextProcessor(PdfPageScan scan, IEventListener listener)
         : PdfCanvasProcessor(listener)
     {
         protected override void InvokeOperator(PdfLiteral oper, IList<PdfObject> operands)
         {
-            if (oper.ToString() is "k" or "K")
-                scan.NoteCmyk();
+            switch (oper.ToString())
+            {
+                case "k" or "K":
+                    scan.NoteCmyk();
+                    break;
+                case "EI" when operands.Count > 0 && operands[0] is PdfStream image &&
+                    IsCmykImage(image):
+                    scan.NoteCmykInlineImage();
+                    break;
+            }
             base.InvokeOperator(oper, operands);
+        }
+
+        /// <summary>Nelle immagini in linea le chiavi sono abbreviate: /CS per lo
+        /// spazio colore, /CMYK per DeviceCMYK.</summary>
+        private static bool IsCmykImage(PdfStream image)
+        {
+            var colorSpace = image.Get(new PdfName("CS")) ?? image.Get(PdfName.ColorSpace);
+            return colorSpace is PdfName name &&
+                (PdfName.DeviceCMYK.Equals(name) || name.GetValue() == "CMYK");
         }
     }
 

@@ -119,12 +119,29 @@ Durante la conversione il programma toglie ciò che il PDF/A non ammette e **te 
 JavaScript, file allegati, azioni automatiche, annotazioni senza aspetto grafico, cifratura.
 I **moduli compilabili vengono appiattiti**: i valori restano, i campi non sono più modificabili.
 
+**Colori CMYK.** I documenti nati per la stampa usano i colori della quadricromia (CMYK), che
+in un PDF/A con profilo sRGB non avrebbero un significato definito: vengono quindi **tradotti
+in sRGB**. La traduzione è colorimetrica, fatta con i profili colore di Windows, e il **nero e
+i grigi di solo nero restano tali** (il testo nero resta nero, non diventa grigio). Restano
+fuori portata — e vengono dichiarati come ostacoli — le immagini JPEG in CMYK e le sfumature
+definite in CMYK: per quei documenti resta la conversione per immagine.
+
 **Un limite dichiarato:** la verifica che facciamo è interna — ricontrolla sul file prodotto
-gli stessi punti dell'analisi. **Non è una validazione formale.** Se il file ti serve per un
-deposito a norma, fallo validare con **veraPDF** (validatore libero e riconosciuto) prima di
-consegnarlo. E se un font usato nel documento non è incorporato né sostituibile senza
-spostare il testo, l'app **rifiuta** la conversione fedele invece di consegnarti un archivio
-diverso dall'originale.
+gli stessi punti dell'analisi. **Non è una validazione formale.** E se un font usato nel
+documento non è incorporato né sostituibile senza spostare il testo, l'app **rifiuta** la
+conversione fedele invece di consegnarti un archivio diverso dall'originale.
+
+### Validazione formale con veraPDF (per il deposito a norma)
+
+Se il file ti serve per una **conservazione a norma**, la parola definitiva ce l'ha
+**veraPDF**, il validatore libero di riferimento. Non è incluso nel programma — come per
+l'assistente AI, si installa solo se serve: **Strumenti → Impostazioni → Validazione PDF/A**,
+pulsante *Installa veraPDF automaticamente*. Servono una connessione e circa 200 MB una volta
+sola (veraPDF gira su Java: se manca, viene installato anche quello).
+
+Da quel momento ogni conversione in PDF/A termina con il **verdetto formale**: file conforme,
+oppure l'elenco delle regole non rispettate. Senza veraPDF tutto il resto continua a
+funzionare esattamente come prima.
 
 ## PDF — altri strumenti
 

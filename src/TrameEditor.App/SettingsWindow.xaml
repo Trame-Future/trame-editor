@@ -1,7 +1,7 @@
 <Window x:Class="TrameEditor.App.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Impostazioni — Assistente AI"
+        Title="Impostazioni — Componenti opzionali"
         Icon="Assets/icon-256.png"
         Width="600" Height="640" MinWidth="520" MinHeight="480"
         WindowStartupLocation="CenterOwner"
@@ -69,6 +69,34 @@
                     <Run FontFamily="Consolas">http://localhost:11434</Run><LineBreak />
                     Anche lì vale la stessa regola: tutto resta sul tuo computer.
                 </TextBlock>
+
+                <!-- veraPDF -->
+                <Separator Margin="0,18,0,0" />
+                <TextBlock Text="Validazione PDF/A (veraPDF)" FontWeight="Bold" FontSize="14"
+                           Foreground="{StaticResource AccentBrush}" Margin="0,14,0,2" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19" Margin="0,0,0,6">
+                    Quando converti un documento in PDF/A, TrameEditor fa una verifica interna dei punti
+                    che controlla. Per un <Bold>deposito a norma</Bold> serve però la validazione formale,
+                    che si fa con <Bold>veraPDF</Bold>, il validatore libero di riferimento.<LineBreak />
+                    Come per l'AI, non è incluso nel programma: si installa solo se serve. Richiede Java,
+                    che se manca viene installato anche lui. Sono circa 200 MB in tutto, una volta sola.
+                </TextBlock>
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Sfoglia…" Padding="10,4" Margin="8,0,0,0"
+                            Click="BrowseVeraPdf_Click" />
+                    <Button DockPanel.Dock="Right" Content="Cerca" Padding="10,4" Margin="8,0,0,0"
+                            Click="FindVeraPdf_Click" />
+                    <TextBox x:Name="VeraPdfBox" Padding="4,4" VerticalContentAlignment="Center" />
+                </DockPanel>
+                <TextBlock x:Name="VeraPdfStatus" TextWrapping="Wrap" FontSize="11"
+                           Margin="0,4,0,0" Foreground="{StaticResource TextMutedBrush}" />
+                <Button x:Name="InstallVeraPdfButton" Margin="0,8,0,0" Padding="0,7"
+                        Content="Installa veraPDF automaticamente" Click="InstallVeraPdf_Click" />
+                <Border x:Name="VeraPdfProgressPanel" Margin="0,8,0,0" Background="#F6F6F4"
+                        CornerRadius="4" Padding="8" Visibility="Collapsed">
+                    <TextBlock x:Name="VeraPdfProgressText" TextWrapping="Wrap"
+                               FontFamily="Consolas" FontSize="11" />
+                </Border>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>

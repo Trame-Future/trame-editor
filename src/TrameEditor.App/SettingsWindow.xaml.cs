@@ -1,6 +1,7 @@
 using System.Windows;
 using TrameEditor.App.Services;
 using TrameEditor.Core.Ai;
+using TrameEditor.Core.Pdf;
 using TrameEditor.Core.Session;
 
 namespace TrameEditor.App;
@@ -12,8 +13,14 @@ public partial class SettingsWindow : Window
     public SettingsWindow()
     {
         InitializeComponent();
-        EndpointBox.Text = AppSettings.Load().OllamaEndpoint;
-        Loaded += (_, _) => ShowRequirements();
+        var settings = AppSettings.Load();
+        EndpointBox.Text = settings.OllamaEndpoint;
+        VeraPdfBox.Text = settings.VeraPdfPath;
+        Loaded += (_, _) =>
+        {
+            ShowRequirements();
+            ShowVeraPdfStatus();
+        };
     }
 
     public static void ShowEditor() =>
@@ -82,9 +89,90 @@ public partial class SettingsWindow : Window
         }
     }
 
+    // ----- veraPDF (validazione formale PDF/A) -----
+
+    private void ShowVeraPdfStatus()
+    {
+        var found = VeraPdfValidator.FindExecutable(VeraPdfBox.Text.Trim());
+        if (found is not null)
+        {
+            VeraPdfStatus.Text = $"✓ veraPDF trovato: {found}";
+            VeraPdfStatus.Foreground = System.Windows.Media.Brushes.DarkGreen;
+            InstallVeraPdfButton.Content = "Reinstalla veraPDF";
+        }
+        else
+        {
+            VeraPdfStatus.Text = VeraPdfInstaller.IsJavaAvailable()
+                ? "veraPDF non è installato. Java c'è già, quindi manca solo lui."
+                : "veraPDF non è installato (e su questo PC manca anche Java, che serve per farlo girare).";
+            VeraPdfStatus.Foreground = (System.Windows.Media.Brush)FindResource("TextMutedBrush");
+            InstallVeraPdfButton.Content = "Installa veraPDF automaticamente";
+        }
+    }
+
+    private void FindVeraPdf_Click(object sender, RoutedEventArgs e)
+    {
+        var found = VeraPdfValidator.FindExecutable();
+        if (found is not null)
+            VeraPdfBox.Text = found;
+        ShowVeraPdfStatus();
+        if (found is null)
+            VeraPdfStatus.Text = "Non ho trovato veraPDF nelle cartelle abituali: " +
+                "usa «Sfoglia…» oppure installalo qui sotto.";
+    }
+
+    private void BrowseVeraPdf_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Scegli verapdf.bat",
+            Filter = "veraPDF (verapdf.bat)|verapdf.bat|Tutti i file|*.*",
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            VeraPdfBox.Text = dialog.FileName;
+            ShowVeraPdfStatus();
+        }
+    }
+
+    private async void InstallVeraPdf_Click(object sender, RoutedEventArgs e)
+    {
+        if (_installing)
+            return;
+        _installing = true;
+        InstallVeraPdfButton.IsEnabled = false;
+        VeraPdfProgressPanel.Visibility = Visibility.Visible;
+        VeraPdfProgressText.Text = string.Empty;
+        var progress = new Progress<string>(line =>
+        {
+            VeraPdfProgressText.Text = (VeraPdfProgressText.Text.Length > 4000
+                ? VeraPdfProgressText.Text[^2000..]
+                : VeraPdfProgressText.Text) + line + "\n";
+        });
+        try
+        {
+            if (await VeraPdfInstaller.InstallAsync(progress) is { } path)
+                VeraPdfBox.Text = path;
+            ShowVeraPdfStatus();
+        }
+        catch (Exception ex)
+        {
+            ((IProgress<string>)progress).Report($"Errore: {ex.Message}");
+        }
+        finally
+        {
+            _installing = false;
+            InstallVeraPdfButton.IsEnabled = true;
+        }
+    }
+
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        new AppSettings { OllamaEndpoint = EndpointBox.Text.Trim() }.Save();
+        new AppSettings
+        {
+            OllamaEndpoint = EndpointBox.Text.Trim(),
+            VeraPdfPath = VeraPdfBox.Text.Trim(),
+        }.Save();
         DialogResult = true;
         Close();
     }

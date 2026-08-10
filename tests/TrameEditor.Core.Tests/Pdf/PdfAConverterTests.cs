@@ -253,6 +253,179 @@ public class PdfAConverterTests : IDisposable
         Assert.False(File.Exists(target), "un rifiuto non deve lasciare file a metà");
     }
 
+    // ----- Colori CMYK -----
+
+    private static string PageContent(string path, int pageNumber = 1)
+    {
+        using var document = new PdfDocument(new PdfReader(path));
+        var contents = document.GetPage(pageNumber).GetPdfObject().Get(PdfName.Contents);
+        var bytes = contents switch
+        {
+            PdfStream stream => stream.GetBytes(),
+            PdfArray array => Enumerable.Range(0, array.Size())
+                .SelectMany(i => array.GetAsStream(i)!.GetBytes()).ToArray(),
+            _ => [],
+        };
+        return Encoding.ASCII.GetString(bytes);
+    }
+
+    private string CreateDocumentWithCmykColor()
+    {
+        var path = Path.Combine(_dir, "cmyk.pdf");
+        using var document = new PdfDocument(new PdfWriter(path));
+        var page = document.AddNewPage(PageSize.A4);
+        var canvas = new PdfCanvas(page);
+        // Rosso di quadricromia: niente ciano, tutto magenta e giallo.
+        canvas.SetFillColor(new iText.Kernel.Colors.DeviceCmyk(0, 100, 100, 0))
+            .Rectangle(50, 600, 200, 100).Fill();
+        var font = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+        canvas.BeginText().SetFontAndSize(font, 14).MoveText(60, 760)
+            .ShowText("Documento in quadricromia").EndText();
+        return path;
+    }
+
+    [Fact]
+    public void Analyze_ColoriCmyk_SonoConvertibili()
+    {
+        var report = PdfAAnalyzer.Analyze(CreateDocumentWithCmykColor());
+
+        Assert.True(report.CanConvertFaithfully, string.Join("; ", report.Blocking));
+        Assert.Contains(report.Issues, i =>
+            i.Severity == PdfAIssueSeverity.Corretto && i.Description.Contains("CMYK"));
+    }
+
+    [Fact]
+    public void ConvertFaithfully_ConverteICoIoriCmykInRgb()
+    {
+        var source = CreateDocumentWithCmykColor();
+        var target = Path.Combine(_dir, "archivio-cmyk.pdf");
+
+        Assert.Matches(@"\bk\b", PageContent(source)); // l'originale usa l'operatore CMYK
+
+        var result = PdfAConverter.ConvertFaithfully(source, target);
+
+        var converted = PageContent(target);
+        Assert.DoesNotMatch(@"(?m)^[\d\.\s]+k\s*$", converted);
+        Assert.Matches(@"[\d\.]+ [\d\.]+ [\d\.]+ rg", converted);
+        Assert.Contains(result.Changes, c => c.Contains("CMYK") && c.Contains("sRGB"));
+
+        // E nel file prodotto non deve restare traccia di CMYK.
+        Assert.True(result.VerificationClean, string.Join("; ", result.Verification.Issues));
+        Assert.DoesNotContain(result.Verification.Issues, i => i.Description.Contains("CMYK"));
+    }
+
+    [Fact]
+    public void ConvertFaithfully_ConverteAncheIColoriTinta()
+    {
+        var path = Path.Combine(_dir, "tinta.pdf");
+        using (var document = new PdfDocument(new PdfWriter(path)))
+        {
+            var page = document.AddNewPage(PageSize.A4);
+
+            // Tinta piatta "Rosso" definita su un alternativo CMYK.
+            var tint = new PdfDictionary();
+            tint.Put(PdfName.FunctionType, new PdfNumber(2));
+            tint.Put(PdfName.Domain, new PdfArray(new double[] { 0, 1 }));
+            tint.Put(PdfName.C0, new PdfArray(new double[] { 0, 0, 0, 0 }));
+            tint.Put(PdfName.C1, new PdfArray(new double[] { 0, 1, 1, 0 }));
+            tint.Put(PdfName.N, new PdfNumber(1));
+
+            var separation = new PdfArray();
+            separation.Add(PdfName.Separation);
+            separation.Add(new PdfName("Rosso"));
+            separation.Add(PdfName.DeviceCMYK);
+            separation.Add(tint.MakeIndirect(document));
+
+            var colorSpaces = new PdfDictionary();
+            colorSpaces.Put(new PdfName("CS0"), separation.MakeIndirect(document));
+            page.GetResources().GetPdfObject().Put(PdfName.ColorSpace, colorSpaces);
+
+            var canvas = new PdfCanvas(page);
+            canvas.GetContentStream().GetOutputStream()
+                .WriteString("/CS0 cs\n1 scn\n50 600 200 100 re\nf\n");
+        }
+        var target = Path.Combine(_dir, "archivio-tinta.pdf");
+
+        var report = PdfAAnalyzer.Analyze(path);
+        Assert.True(report.CanConvertFaithfully, string.Join("; ", report.Blocking));
+
+        PdfAConverter.ConvertFaithfully(path, target);
+
+        var converted = PageContent(target);
+        Assert.Contains("/DeviceRGB cs", converted);
+        Assert.Matches(@"[\d\.]+ [\d\.]+ [\d\.]+ sc", converted);
+
+        // Lo spazio colore CMYK non è più fra le risorse.
+        using var document2 = new PdfDocument(new PdfReader(target));
+        var remaining = document2.GetPage(1).GetResources().GetPdfObject()
+            .GetAsDictionary(PdfName.ColorSpace);
+        Assert.True(remaining is null || remaining.Size() == 0);
+    }
+
+    [Fact]
+    public void Analyze_ImmagineJpegInCmyk_RestaBloccante()
+    {
+        var path = Path.Combine(_dir, "jpegCmyk.pdf");
+        using (var document = new PdfDocument(new PdfWriter(path)))
+        {
+            var page = document.AddNewPage(PageSize.A4);
+            var image = new PdfStream([0xFF, 0xD8, 0xFF, 0xE0]);
+            image.Put(PdfName.Type, PdfName.XObject);
+            image.Put(PdfName.Subtype, PdfName.Image);
+            image.Put(PdfName.Filter, PdfName.DCTDecode);
+            image.Put(PdfName.ColorSpace, PdfName.DeviceCMYK);
+            image.Put(PdfName.Width, new PdfNumber(1));
+            image.Put(PdfName.Height, new PdfNumber(1));
+            image.Put(PdfName.BitsPerComponent, new PdfNumber(8));
+
+            var xobjects = new PdfDictionary();
+            xobjects.Put(new PdfName("Im0"), image.MakeIndirect(document));
+            page.GetResources().GetPdfObject().Put(PdfName.XObject, xobjects);
+        }
+
+        var report = PdfAAnalyzer.Analyze(path);
+
+        Assert.False(report.CanConvertFaithfully);
+        Assert.Contains(report.Blocking, i => i.Description.Contains("JPEG"));
+    }
+
+    [Fact]
+    public void CmykToRgb_UsaIProfiliDiSistema_EConverteISoliti()
+    {
+        using var converter = CmykToRgb.ForDeviceCmyk();
+
+        Assert.True(converter.UsesIccProfiles,
+            "su Windows il profilo CMYK di sistema deve esserci: " + converter.SourceDescription);
+
+        var white = converter.Convert(0, 0, 0, 0);
+        var red = converter.Convert(0, 1, 1, 0);
+        var cyan = converter.Convert(1, 0, 0, 0);
+
+        Assert.True(white.R > 0.9 && white.G > 0.9 && white.B > 0.9, $"bianco: {white}");
+        Assert.True(red.R > red.G && red.R > red.B, $"rosso: {red}");
+        // Il ciano di quadricromia non è (0,1,1): se lo fosse, non staremmo usando il profilo.
+        Assert.True(cyan.B > cyan.G && cyan.G < 0.9, $"ciano: {cyan}");
+    }
+
+    /// <summary>
+    /// Il testo nero di un documento è quasi sempre scritto col solo canale K.
+    /// Un profilo di stampa descrive il nero *stampato*, che è un grigio molto
+    /// scuro: applicarlo alla lettera renderebbe grigio il testo dell'archivio.
+    /// </summary>
+    [Fact]
+    public void CmykToRgb_IlNeroDiSoloK_RestaNeroPuro()
+    {
+        using var converter = CmykToRgb.ForDeviceCmyk();
+
+        Assert.Equal((0f, 0f, 0f), converter.Convert(0, 0, 0, 1));
+        Assert.Equal((0.5f, 0.5f, 0.5f), converter.Convert(0, 0, 0, 0.5f));
+        Assert.Equal((1f, 1f, 1f), converter.Convert(0, 0, 0, 0));
+
+        // Il "nero ricco" (con anche C, M, Y) non è nero puro e passa dal profilo.
+        var rich = converter.Convert(0.6f, 0.4f, 0.4f, 1);
+        Assert.True(rich.R < 0.2 && rich.G < 0.2 && rich.B < 0.2, $"nero ricco: {rich}");
+    }
+
     // ----- Conversione per immagine -----
 
     /// <summary>"Scansione" sintetica: una pagina immagine senza layer di testo.</summary>

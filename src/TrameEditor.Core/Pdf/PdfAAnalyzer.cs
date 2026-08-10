@@ -168,6 +168,24 @@ public static class PdfAAnalyzer
     /// form XObject (che hanno risorse proprie).</summary>
     internal static IEnumerable<PdfDictionary> CollectFontDictionaries(PdfPage page)
     {
+        var found = new List<PdfDictionary>();
+        var seen = new HashSet<PdfObject>();
+        foreach (var resources in CollectResourceDictionaries(page))
+        {
+            if (resources.GetAsDictionary(PdfName.Font) is not { } fonts)
+                continue;
+            foreach (var key in fonts.KeySet())
+            {
+                if (fonts.GetAsDictionary(key) is { } font && seen.Add(font))
+                    found.Add(font);
+            }
+        }
+        return found;
+    }
+
+    /// <summary>Le risorse della pagina e quelle proprie dei form XObject annidati.</summary>
+    internal static IEnumerable<PdfDictionary> CollectResourceDictionaries(PdfPage page)
+    {
         var visited = new HashSet<PdfObject>();
         var found = new List<PdfDictionary>();
         Walk(page.GetResources().GetPdfObject(), visited, found);
@@ -178,16 +196,7 @@ public static class PdfAAnalyzer
     {
         if (resources is null || !visited.Add(resources))
             return;
-
-        var fonts = resources.GetAsDictionary(PdfName.Font);
-        if (fonts is not null)
-        {
-            foreach (var key in fonts.KeySet())
-            {
-                if (fonts.GetAsDictionary(key) is { } font && visited.Add(font))
-                    found.Add(font);
-            }
-        }
+        found.Add(resources);
 
         var xobjects = resources.GetAsDictionary(PdfName.XObject);
         if (xobjects is null)
@@ -265,11 +274,75 @@ public static class PdfAAnalyzer
             issues.Add(new PdfAIssue(PdfAIssueSeverity.Bloccante,
                 "Il contenuto usa la compressione LZW, vietata in PDF/A.", $"pagina {pageNumber}"));
 
-        if (scan?.UsesCmyk == true || ResourcesUseCmyk(page))
-            issues.Add(new PdfAIssue(PdfAIssueSeverity.Bloccante,
-                "La pagina usa colori CMYK: con un profilo di destinazione sRGB non sarebbero " +
-                "definiti. Servirebbe una conversione di colore che non facciamo.",
+        var blockers = FindCmykBlockers(page, scan);
+        foreach (var blocker in blockers)
+            issues.Add(new PdfAIssue(PdfAIssueSeverity.Bloccante, blocker, $"pagina {pageNumber}"));
+
+        if (blockers.Count == 0 && (scan?.UsesCmyk == true || ResourcesUseCmyk(page)))
+            issues.Add(new PdfAIssue(PdfAIssueSeverity.Corretto,
+                "La pagina usa colori CMYK: saranno convertiti in sRGB, il profilo di destinazione " +
+                "del PDF/A. La conversione è colorimetrica ma la sorgente CMYK è un'assunzione " +
+                "standard, quindi qualche colore può cambiare leggermente.",
                 $"pagina {pageNumber}"));
+    }
+
+    /// <summary>I casi di CMYK che non sappiamo tradurre: meglio dirlo che
+    /// consegnare un archivio con i colori sbagliati.</summary>
+    private static List<string> FindCmykBlockers(PdfPage page, PdfPageScan? scan)
+    {
+        var blockers = new List<string>();
+
+        if (scan?.UsesCmykInlineImage == true)
+            blockers.Add("La pagina contiene un'immagine CMYK scritta dentro il flusso di contenuto: " +
+                "non è convertibile in sRGB.");
+
+        foreach (var resources in CollectResourceDictionaries(page))
+        {
+            var xobjects = resources.GetAsDictionary(PdfName.XObject);
+            if (xobjects is not null && xobjects.KeySet().Any(key =>
+                    xobjects.GetAsStream(key) is { } stream &&
+                    PdfName.Image.Equals(stream.GetAsName(PdfName.Subtype)) &&
+                    IsCmyk(ResolveColorSpace(stream.Get(PdfName.ColorSpace), resources)) &&
+                    IsCompressedPhoto(stream)))
+            {
+                blockers.Add("La pagina contiene un'immagine JPEG in CMYK: non è decodificabile in " +
+                    "modo affidabile, quindi non la convertiamo in sRGB.");
+            }
+
+            var shadings = resources.GetAsDictionary(PdfName.Shading);
+            if (shadings is not null && shadings.KeySet().Any(key =>
+                    IsCmyk(ResolveColorSpace(
+                        shadings.GetAsDictionary(key)?.Get(PdfName.ColorSpace) ??
+                        shadings.GetAsStream(key)?.Get(PdfName.ColorSpace), resources))))
+            {
+                blockers.Add("La pagina contiene una sfumatura definita in CMYK: la conversione in " +
+                    "sRGB richiederebbe di ricostruirla, e non lo facciamo.");
+            }
+        }
+
+        return [.. blockers.Distinct()];
+    }
+
+    /// <summary>Uno spazio colore può essere scritto per esteso o richiamato per
+    /// nome dalle risorse.</summary>
+    private static PdfObject? ResolveColorSpace(PdfObject? colorSpace, PdfDictionary resources)
+    {
+        if (colorSpace is not PdfName name)
+            return colorSpace;
+        return resources.GetAsDictionary(PdfName.ColorSpace)?.Get(name) ?? colorSpace;
+    }
+
+    private static bool IsCompressedPhoto(PdfStream image)
+    {
+        var filter = image.Get(PdfName.Filter);
+        return filter switch
+        {
+            PdfName name => PdfName.DCTDecode.Equals(name) || PdfName.JPXDecode.Equals(name),
+            PdfArray array => Enumerable.Range(0, array.Size()).Any(i =>
+                PdfName.DCTDecode.Equals(array.GetAsName(i)) ||
+                PdfName.JPXDecode.Equals(array.GetAsName(i))),
+            _ => false,
+        };
     }
 
     private static bool UsesLzw(PdfPage page)
@@ -299,20 +372,20 @@ public static class PdfAAnalyzer
 
     private static bool ResourcesUseCmyk(PdfPage page)
     {
-        var resources = page.GetResources().GetPdfObject();
+        foreach (var resources in CollectResourceDictionaries(page))
+        {
+            var colorSpaces = resources.GetAsDictionary(PdfName.ColorSpace);
+            if (colorSpaces is not null && colorSpaces.KeySet().Any(key => IsCmyk(colorSpaces.Get(key))))
+                return true;
 
-        var colorSpaces = resources.GetAsDictionary(PdfName.ColorSpace);
-        if (colorSpaces is not null &&
-            colorSpaces.KeySet().Any(key => IsCmyk(colorSpaces.Get(key))))
-            return true;
-
-        var xobjects = resources.GetAsDictionary(PdfName.XObject);
-        if (xobjects is null)
-            return false;
-        return xobjects.KeySet().Any(key =>
-            xobjects.GetAsStream(key) is { } stream &&
-            PdfName.Image.Equals(stream.GetAsName(PdfName.Subtype)) &&
-            IsCmyk(stream.Get(PdfName.ColorSpace)));
+            var xobjects = resources.GetAsDictionary(PdfName.XObject);
+            if (xobjects is not null && xobjects.KeySet().Any(key =>
+                    xobjects.GetAsStream(key) is { } stream &&
+                    PdfName.Image.Equals(stream.GetAsName(PdfName.Subtype)) &&
+                    IsCmyk(ResolveColorSpace(stream.Get(PdfName.ColorSpace), resources))))
+                return true;
+        }
+        return false;
     }
 
     private static bool IsCmyk(PdfObject? colorSpace)
