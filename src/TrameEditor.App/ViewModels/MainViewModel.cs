@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using TrameEditor.Core.Markdown;
+using TrameEditor.Core.Invoices;
 using TrameEditor.Core.Pdf;
 using TrameEditor.Core.Signatures;
 using TrameEditor.Core.Session;
@@ -15,9 +16,13 @@ namespace TrameEditor.App.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private const string OpenFilter =
-        "Tutti i file supportati (*.txt;*.md;*.pdf)|*.txt;*.md;*.markdown;*.pdf|" +
+        "Tutti i file supportati (*.pdf;*.txt;*.md;*.p7m;*.xml)|" +
+            "*.pdf;*.txt;*.md;*.markdown;*.p7m;*.xml|" +
+        "PDF (*.pdf)|*.pdf|" +
         "File di testo e Markdown (*.txt;*.md)|*.txt;*.md;*.markdown|" +
-        "PDF (*.pdf)|*.pdf|Tutti i file (*.*)|*.*";
+        "Documenti firmati (*.p7m)|*.p7m|" +
+        "Fatture elettroniche (*.xml;*.p7m)|*.xml;*.p7m|" +
+        "Tutti i file (*.*)|*.*";
     private const string TextSaveFilter =
         "File di testo e Markdown (*.txt;*.md)|*.txt;*.md;*.markdown|Tutti i file (*.*)|*.*";
 
@@ -218,6 +223,13 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        if (Path.GetExtension(path).Equals(".xml", StringComparison.OrdinalIgnoreCase) &&
+            FatturaElettronicaReader.LooksLikeInvoice(path))
+        {
+            OpenElectronicInvoice(path);
+            return;
+        }
+
         try
         {
             DocumentTabViewModel? document;
@@ -235,6 +247,67 @@ public partial class MainViewModel : ObservableObject
             }
             if (Documents is [TextDocumentViewModel { IsPristineUntitled: true } blank])
                 Documents.Remove(blank);
+            Documents.Add(document);
+            SelectedDocument = document;
+            RegisterRecent(path);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Impossibile aprire \"{path}\":\n{ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Apre una fattura elettronica: al posto dell'XML illeggibile mostra una
+    /// trascrizione in italiano, e apre in schede separate gli eventuali allegati
+    /// PDF (la "copia di cortesia" che molti fornitori mettono dentro la fattura).
+    /// </summary>
+    private void OpenElectronicInvoice(string path)
+    {
+        ElectronicInvoice invoice;
+        try
+        {
+            invoice = FatturaElettronicaReader.Read(path);
+        }
+        catch (InvoiceReadException ex)
+        {
+            // Non è leggibile come fattura: si apre comunque il file, come testo.
+            ShowError($"{ex.Message}\n\nIl file viene aperto come documento di testo.");
+            OpenAsText(path);
+            return;
+        }
+
+        try
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "TrameEditor", "fatture");
+            Directory.CreateDirectory(directory);
+
+            var baseName = Path.GetFileNameWithoutExtension(path);
+            var readable = Path.Combine(directory, $"{baseName} - leggibile.md");
+            File.WriteAllText(readable,
+                FatturaRenderer.ToMarkdown(invoice, Path.GetFileName(path)));
+            OpenPath(readable);
+            RegisterRecent(path);
+
+            foreach (var attachment in invoice.Documenti.SelectMany(d => d.Allegati))
+            {
+                var target = Path.Combine(directory, attachment.Nome);
+                File.WriteAllBytes(target, attachment.Data);
+                if (Path.GetExtension(target).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+                    OpenPath(target);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Fattura letta ma non apribile:\n{ex.Message}");
+        }
+    }
+
+    private void OpenAsText(string path)
+    {
+        try
+        {
+            var document = TextDocumentViewModel.CreateFromFile(path);
             Documents.Add(document);
             SelectedDocument = document;
             RegisterRecent(path);

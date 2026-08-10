@@ -108,6 +108,27 @@ Utile prima di inviare un documento a terzi. Se qualche riga non è rimovibile
 (testo dentro moduli grafici), l'app **te lo dice chiaramente**: mai una falsa sicurezza.
 Le scansioni vanno prima passate con l'**OCR**.
 
+## Fatture elettroniche (XML) 🧾
+
+Una **fattura elettronica** è un file XML: aperto con un programma qualsiasi è illeggibile.
+Apri il file con TrameEditor (doppio clic, *Apri*, o trascinandolo) e al suo posto compare
+una **trascrizione in italiano**: chi emette e chi riceve, tipo e numero del documento,
+righe, riepilogo IVA, pagamento e scadenza, dati di trasmissione.
+
+I **codici** vengono tradotti: *TD01* diventa "Fattura", *MP05* diventa "Bonifico", *N1*
+diventa "Escluse ex art. 15". Un codice che non conosciamo viene mostrato **com'è**: su un
+documento fiscale inventare una descrizione sarebbe peggio che non darla.
+
+Se la fattura contiene una **copia di cortesia in PDF** (molti fornitori la allegano), viene
+estratta e aperta in una scheda a parte.
+
+La vista leggibile è un documento Markdown come gli altri: puoi stamparla o salvarla in **PDF**
+e in **PDF/A** con i comandi soliti. In testa c'è sempre scritto che **il documento che fa fede
+resta il file XML**: questa è una trascrizione, comoda ma non sostitutiva.
+
+Le fatture arrivano quasi sempre dentro una **busta firmata `.p7m`**: aprila e basta, il
+programma toglie la busta, verifica la firma e mostra la fattura (vedi qui sotto).
+
 ## Documenti firmati digitalmente (.p7m) ✍
 
 I file **`.p7m`** sono "buste" firmate digitalmente: arrivano di continuo dalla pubblica
