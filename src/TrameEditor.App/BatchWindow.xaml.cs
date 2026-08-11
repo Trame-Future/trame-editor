@@ -105,6 +105,22 @@ public partial class BatchWindow : Window
             await RunRecipeAsync();
     }
 
+    /// <summary>PDF/A e cifratura non possono stare insieme: lo standard lo
+    /// vieta. Invece di scegliere noi quale sacrificare, si spegne l'altro e si
+    /// dice perché.</summary>
+    private void PdfA_Changed(object sender, RoutedEventArgs e)
+    {
+        if (PdfACheck.IsChecked == true && ProtectCheck.IsChecked == true)
+            ProtectCheck.IsChecked = false;
+        ExclusionNote.Visibility = PdfACheck.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void Protect_Changed(object sender, RoutedEventArgs e)
+    {
+        if (ProtectCheck.IsChecked == true && PdfACheck.IsChecked == true)
+            PdfACheck.IsChecked = false;
+    }
+
     // ----- Estrazione dai file firmati -----
 
     private Task<(bool Success, string Outcome)> ExtractOne(string file)
@@ -126,11 +142,19 @@ public partial class BatchWindow : Window
             OcrCheck.IsChecked == true,
             RedactCheck.IsChecked == true,
             CompressCheck.IsChecked == true,
-            ProtectCheck.IsChecked == true ? ProtectPassword.Password : null);
+            ProtectCheck.IsChecked == true ? ProtectPassword.Password : null,
+            PdfACheck.IsChecked == true);
 
-        if (recipe is { RunOcr: false, Redact: false, Compress: false, ProtectPassword: null or "" })
+        if (recipe is { RunOcr: false, Redact: false, Compress: false, ProtectPassword: null or "",
+                ConvertToPdfA: false })
         {
             MessageBox.Show("Scegli almeno un passo della ricetta.",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (recipe.IsContradictory)
+        {
+            MessageBox.Show("PDF/A e password si escludono: un file cifrato non è un PDF/A.",
                 "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }

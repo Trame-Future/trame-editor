@@ -1,0 +1,73 @@
+<Window x:Class="TrameEditor.App.PdfUaWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Accessibilità (PDF/UA)"
+        Icon="Assets/icon-256.png"
+        Width="660" Height="620" MinWidth="560" MinHeight="460"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="White">
+    <DockPanel Margin="16,12">
+        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,10">
+            Un PDF <Bold>accessibile</Bold> è un documento che una sintesi vocale sa leggere
+            nell'ordine giusto, sapendo che cosa è un titolo, che cosa è una tabella e che cosa
+            mostra un'immagine. Ecco che cosa abbiamo trovato in questo documento.
+        </TextBlock>
+
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <Border Background="#F6F6F4" CornerRadius="4" Padding="10,8">
+                <StackPanel>
+                    <TextBlock Text="Quello che possiamo sistemare qui" FontWeight="SemiBold" />
+                    <TextBlock TextWrapping="Wrap" FontSize="11" Margin="0,2,0,8"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Text="Lingua e titolo del documento: due dati che non richiedono di interpretare il contenuto. Salviamo una copia, l'originale non si tocca." />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Lingua:" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox Grid.Column="1" x:Name="LanguageBox" Padding="3" VerticalContentAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="Titolo:" VerticalAlignment="Center" Margin="12,0,6,0" />
+                        <TextBox Grid.Column="3" x:Name="TitleBox" Padding="3" VerticalContentAlignment="Center" />
+                    </Grid>
+                    <Button x:Name="FixButton" Margin="0,10,0,0" Padding="0,6" FontWeight="Bold"
+                            Content="Salva una copia con lingua e titolo…" Click="Fix_Click" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock x:Name="LegalNote" TextWrapping="Wrap" Margin="0,10,0,0"
+                       FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+
+            <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                <TextBlock x:Name="CountText" VerticalAlignment="Center"
+                           Foreground="{StaticResource TextMutedBrush}" FontSize="11" />
+                <Button DockPanel.Dock="Right" Content="Chiudi" Width="90" Padding="0,5"
+                        Margin="8,0,0,0" IsCancel="True" />
+                <Button DockPanel.Dock="Right" x:Name="ValidateButton" Content="Valida con veraPDF"
+                        Width="150" Padding="0,5" Click="Validate_Click" />
+            </DockPanel>
+        </StackPanel>
+
+        <ListBox x:Name="IssuesList" BorderBrush="#DDDDDD"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Focusable" Value="False" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <DockPanel Margin="2,4">
+                        <TextBlock DockPanel.Dock="Left" Text="{Binding Symbol}" FontSize="14"
+                                   Width="24" VerticalAlignment="Top" Foreground="{Binding Accent}" />
+                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                    </DockPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</Window>

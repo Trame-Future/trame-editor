@@ -17,7 +17,7 @@ namespace TrameEditor.App.ViewModels;
 
 public sealed record PdfSearchMatch(PdfPageViewModel Page, string Snippet)
 {
-    public string Display => $"Pag. {Page.PageNumber} â€” {Snippet}";
+    public string Display => $"Pag. {Page.PageNumber} — {Snippet}";
 }
 
 public enum PdfAnnotationTool
@@ -287,7 +287,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     }
 
     private static string TrimSnippet(string text) =>
-        text.Length <= 70 ? text : text[..70] + "â€¦";
+        text.Length <= 70 ? text : text[..70] + "…";
 
     // ----- Modalità "Modifica testo" (M3) -----
 
@@ -410,7 +410,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
         ActiveRegion = region;
         EditText = region.Line.Text;
-        PlanDescription = "analisi del font in corsoâ€¦";
+        PlanDescription = "analisi del font in corso…";
         _ = UpdatePlanAsync(region);
     }
 
@@ -567,7 +567,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     private async Task LoadFormFieldsAsync()
     {
         FormFields.Clear();
-        FormStatus = "lettura del moduloâ€¦";
+        FormStatus = "lettura del modulo…";
         try
         {
             var fields = await Task.Run(() => PdfFormService.GetFields(_workingPath));
@@ -897,7 +897,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             {
                 message += $"\n\nâš  ATTENZIONE: {result.SkippedLines.Count} righe non erano " +
                     "rimovibili (testo dentro moduli grafici): i dati lì presenti NON sono stati tolti:\n" +
-                    string.Join("\n", result.SkippedLines.Take(5).Select(l => "â€¢ " + l.Text));
+                    string.Join("\n", result.SkippedLines.Take(5).Select(l => "• " + l.Text));
             }
             MessageBox.Show(message, "TrameEditor", MessageBoxButton.OK,
                 result.SkippedLines.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
@@ -1110,6 +1110,36 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         catch (Exception ex)
         {
             MessageBox.Show($"Conversione in PDF/A non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
+    /// <summary>
+    /// Esame di accessibilità (PDF/UA): che cosa manca perché il documento sia
+    /// leggibile da una sintesi vocale, che cosa possiamo sistemare noi e — se
+    /// veraPDF è installato — il verdetto formale.
+    /// </summary>
+    [RelayCommand]
+    private async Task CheckAccessibilityAsync()
+    {
+        try
+        {
+            IsSearching = true;
+            var staged = NewTempPath();
+            var pages = Pages.Select(p => new PdfPageEdit(p.OriginalIndex, p.RotationDelta)).ToList();
+            var working = _workingPath;
+            await Task.Run(() => PdfPageOperations.Build(working, pages, staged));
+
+            var report = await Task.Run(() => PdfUaChecker.Analyze(staged));
+            PdfUaWindow.ShowFor(staged, FileName, report);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Esame dell'accessibilità non riuscito:\n{ex.Message}",
                 "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally

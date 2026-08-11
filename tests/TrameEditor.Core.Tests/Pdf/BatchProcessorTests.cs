@@ -79,6 +79,59 @@ public class BatchProcessorTests : IDisposable
     }
 
     [Fact]
+    public void ProcessFile_ConvertToPdfA_ProducesAConformantCopy()
+    {
+        var source = CreateSensitivePdf("archivio.pdf");
+        var recipe = new BatchRecipe(RunOcr: false, Redact: false, Compress: false,
+            ProtectPassword: null, ConvertToPdfA: true);
+
+        var result = BatchProcessor.ProcessFile(source, _outDir, recipe);
+
+        Assert.True(result.Success, result.Outcome);
+        Assert.Contains("PDF/A-2", result.Outcome);
+
+        // il file prodotto supera la nostra verifica interna
+        var verification = PdfAAnalyzer.Analyze(result.OutputPath!);
+        Assert.Empty(verification.NonEmbeddedFonts);
+        Assert.All(verification.Issues, i => Assert.NotEqual(PdfAIssueSeverity.Bloccante, i.Severity));
+    }
+
+    [Fact]
+    public void ProcessFile_ConvertToPdfA_ComesAfterTheOtherSteps()
+    {
+        var source = CreateSensitivePdf("completo.pdf");
+        var recipe = new BatchRecipe(RunOcr: false, Redact: true, Compress: true,
+            ProtectPassword: null, ConvertToPdfA: true);
+
+        var result = BatchProcessor.ProcessFile(source, _outDir, recipe);
+
+        Assert.True(result.Success, result.Outcome);
+        Assert.Contains("anonimizzati", result.Outcome);
+        Assert.Contains("compresso", result.Outcome);
+        Assert.Contains("PDF/A-2", result.Outcome);
+
+        // l'anonimizzazione è sopravvissuta alla conversione
+        Assert.DoesNotContain(PdfRedactionService.Scan(result.OutputPath!),
+            m => m.Kind is SensitiveKind.CodiceFiscale or SensitiveKind.Email);
+    }
+
+    [Fact]
+    public void ProcessFile_PdfAeProtezioneInsieme_SonoUnaContraddizione()
+    {
+        var source = CreateSensitivePdf("contraddittorio.pdf");
+        var recipe = new BatchRecipe(RunOcr: false, Redact: false, Compress: false,
+            ProtectPassword: "x", ConvertToPdfA: true);
+
+        Assert.True(recipe.IsContradictory);
+
+        var result = BatchProcessor.ProcessFile(source, _outDir, recipe);
+
+        Assert.False(result.Success);
+        Assert.Contains("si escludono", result.Outcome);
+        Assert.Empty(Directory.GetFiles(_outDir));
+    }
+
+    [Fact]
     public void ProcessFile_WithNoSteps_ReportsIt()
     {
         var source = CreateSensitivePdf("niente.pdf");

@@ -250,6 +250,29 @@ Da quel momento ogni conversione in PDF/A termina con il **verdetto formale**: f
 oppure l'elenco delle regole non rispettate. Senza veraPDF tutto il resto continua a
 funzionare esattamente come prima.
 
+## PDF — Accessibilità (PDF/UA) ♿
+
+Menu **Converti → Verifica l'accessibilità (PDF/UA)…**. Un PDF accessibile è un documento
+che una sintesi vocale sa leggere nell'ordine giusto, sapendo che cosa è un titolo, che cosa
+è una tabella e che cosa mostra un'immagine.
+
+La finestra elenca che cosa manca, distinguendo due cose:
+
+- **Quello che possiamo sistemare noi**: la **lingua** del documento (senza, la sintesi
+  vocale non sa con che pronuncia leggerlo), il **titolo**, e la richiesta di mostrare il
+  titolo al posto del nome del file. Si salva una copia, l'originale non si tocca.
+- **Quello che non possiamo inventare**: la **marcatura del contenuto** e i **testi
+  alternativi** delle immagini. Dire che cosa è un titolo o che cosa mostra una foto è una
+  decisione di chi conosce il documento, non una cosa da indovinare. Si fa nel programma con
+  cui il documento è stato scritto — Word, LibreOffice e InDesign esportano PDF marcati.
+
+Se hai installato **veraPDF** puoi chiedere il verdetto formale **PDF/UA-1** con il pulsante
+apposito.
+
+> **Il confine, detto chiaro.** veraPDF verifica le regole *controllabili da una macchina*:
+> è un limite dello standard, non del programma. Un documento che le supera tutte può essere
+> ancora poco accessibile, se le marcature ci sono ma sono sbagliate. La prova definitiva
+> resta provarlo con una sintesi vocale.
 ## PDF — altri strumenti
 
 - **Comprimi…** salva una copia alleggerita (immagini ricompresse). Puoi comprimere al meglio, oppure chiedere che il file **stia sotto un certo peso** (il limite della PEC): si prova per gradi e ci si ferma appena rientra. Se nemmeno al massimo della compressione ci sta, te lo diciamo invece di far finta di esserci riusciti.
@@ -341,9 +364,15 @@ documenti in cui la parola non c'è.
 **Menu **Strumenti → Ricette** (o la scheda Strumenti della barra)**. Due modi di lavorare a mucchi:
 
 **Ricetta sui PDF** — scegli tanti PDF (o una cartella) e applica a tutti la stessa
-sequenza: **OCR → Anonimizza → Comprimi → Proteggi con password** (solo i passi che
-servono). Ogni file riceve un esito dettagliato; i PDF già protetti vengono saltati e
-segnalati.
+sequenza: **OCR → Anonimizza → Comprimi → Converti in PDF/A → Proteggi con password**
+(solo i passi che servono). Ogni file riceve un esito dettagliato; i PDF già protetti
+vengono saltati e segnalati.
+
+Sul **PDF/A in serie** due cose da sapere. La conversione è solo quella **fedele**:
+rasterizzare cinquanta file senza guardarli, perdendo il testo, non è una cosa da fare a
+mucchi — i file che non si possono convertire così vengono elencati, e li apri uno per uno
+per scegliere. E **PDF/A e password si escludono**: un file cifrato non è un PDF/A, quindi
+le due spunte si spengono a vicenda.
 
 **Estrai da file firmati (.p7m)** — metti in una cartella tutti i documenti firmati
 digitalmente e tirane fuori in un colpo solo i documenti veri, apribili con qualunque

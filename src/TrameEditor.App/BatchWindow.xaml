@@ -34,12 +34,21 @@
                         <CheckBox x:Name="OcrCheck" Content="OCR — riconosci il testo delle pagine scansionate" Margin="0,2" />
                         <CheckBox x:Name="RedactCheck" Content="Anonimizza — rimuovi dati personali e metadati (automatico, senza conferme)" Margin="0,2" />
                         <CheckBox x:Name="CompressCheck" Content="Comprimi — riduci il peso delle immagini" Margin="0,2" />
+                        <CheckBox x:Name="PdfACheck" Margin="0,2" Checked="PdfA_Changed" Unchecked="PdfA_Changed"
+                                  Content="Converti in PDF/A — il formato dell'archiviazione a lungo termine" />
+                        <TextBlock TextWrapping="Wrap" FontSize="11" Margin="22,0,0,4"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Text="Solo per via fedele: rasterizzare molti file senza guardarli, perdendo il testo, non è una cosa da fare in serie. I file che non si possono convertire così vengono elencati, da aprire uno per uno." />
                         <DockPanel Margin="0,2">
-                            <CheckBox x:Name="ProtectCheck" Content="Proteggi con password:" VerticalAlignment="Center" />
+                            <CheckBox x:Name="ProtectCheck" Content="Proteggi con password:" VerticalAlignment="Center"
+                                      Checked="Protect_Changed" Unchecked="Protect_Changed" />
                             <PasswordBox x:Name="ProtectPassword" Width="180" Margin="8,0,0,0" Padding="3,2"
                                          HorizontalAlignment="Left"
                                          IsEnabled="{Binding IsChecked, ElementName=ProtectCheck}" />
                         </DockPanel>
+                        <TextBlock x:Name="ExclusionNote" TextWrapping="Wrap" FontSize="11" Margin="22,2,0,0"
+                                   Visibility="Collapsed" Foreground="Firebrick"
+                                   Text="PDF/A e password si escludono: un file cifrato non è un PDF/A. Scegline uno." />
                     </StackPanel>
                 </TabItem>
                 <TabItem Header="Estrai da file firmati (.p7m)">

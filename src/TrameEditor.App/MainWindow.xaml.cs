@@ -134,6 +134,7 @@ public partial class MainWindow : Fluent.RibbonWindow
         // Converti
         _ui.BindPath("export-pdf", nameof(MainViewModel.ExportPdfCommand));
         _ui.BindPath("pdfa", "SelectedDocument.ConvertToPdfACommand");
+        _ui.BindPath("pdfua", "SelectedDocument.CheckAccessibilityCommand");
         _ui.BindPath("export-html", nameof(MainViewModel.ExportHtmlCommand));
         _ui.BindPath("export-images", "SelectedDocument.ExportImagesCommand");
         _ui.BindPath("export-text", "SelectedDocument.ExportTextCommand");

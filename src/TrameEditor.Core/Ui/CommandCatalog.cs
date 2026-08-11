@@ -204,6 +204,12 @@ public static class CommandCatalog
         },
         new()
         {
+            Id = "pdfua", Label = "Accessibilità", MenuLabel = "Verifica l'accessibilità (PDF/UA)…",
+            Menu = MenuConvert, Glyph = "\uE776",
+            Description = "Che cosa manca perché il documento sia leggibile da una sintesi vocale",
+        },
+        new()
+        {
             Id = "export-html", Label = "Esporta HTML", MenuLabel = "Esporta l'anteprima in HTML…",
             Menu = MenuConvert, Description = "Esporta l'anteprima Markdown come pagina HTML",
             Glyph = "\uE774",

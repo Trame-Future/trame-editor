@@ -36,6 +36,7 @@ public static class PdfPageOperations
                 page.Rotate = NormalizeRotation(page.Rotate + edit.RotationDelta);
             }
         }
+        CopyIdentity(sourcePath, target);
         SaveAtomic(target, targetPath);
     }
 
@@ -55,6 +56,44 @@ public static class PdfPageOperations
     }
 
     private static int NormalizeRotation(int degrees) => ((degrees % 360) + 360) % 360;
+
+    /// <summary>
+    /// Rimontare le pagine non cambia <i>quale</i> documento è: titolo, autore e
+    /// lingua devono sopravvivere. Senza questo si perdevano — e con la lingua se
+    /// ne va l'accessibilità, perché una sintesi vocale non sa più come leggerlo.
+    /// </summary>
+    private static void CopyIdentity(string sourcePath, PdfDocument target)
+    {
+        try
+        {
+            using var source = PdfReader.Open(sourcePath, PdfDocumentOpenMode.InformationOnly);
+
+            if (!string.IsNullOrEmpty(source.Info.Title))
+                target.Info.Title = source.Info.Title;
+            if (!string.IsNullOrEmpty(source.Info.Author))
+                target.Info.Author = source.Info.Author;
+            if (!string.IsNullOrEmpty(source.Info.Subject))
+                target.Info.Subject = source.Info.Subject;
+            if (!string.IsNullOrEmpty(source.Info.Keywords))
+                target.Info.Keywords = source.Info.Keywords;
+
+            var language = source.Internals.Catalog.Elements.GetString("/Lang");
+            if (!string.IsNullOrEmpty(language))
+                target.Internals.Catalog.Elements.SetString("/Lang", language);
+
+            var preferences = source.Internals.Catalog.Elements.GetDictionary("/ViewerPreferences");
+            if (preferences?.Elements.GetBoolean("/DisplayDocTitle") == true)
+            {
+                var copy = new PdfDictionary(target);
+                copy.Elements.SetBoolean("/DisplayDocTitle", true);
+                target.Internals.Catalog.Elements.SetObject("/ViewerPreferences", copy);
+            }
+        }
+        catch (Exception)
+        {
+            // i metadati sono un di più: non devono impedire di salvare le pagine
+        }
+    }
 
     private static void SaveAtomic(PdfDocument document, string path)
     {

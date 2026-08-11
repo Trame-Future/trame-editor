@@ -65,9 +65,18 @@ public static class VeraPdfValidator
     /// strumento di verifica non deve mai passare per un file non conforme.
     /// </summary>
     public static VeraPdfReport Validate(string veraPdfPath, string pdfPath, PdfALevel level,
+        TimeSpan? timeout = null) =>
+        ValidateFlavour(veraPdfPath, pdfPath, level == PdfALevel.A2u ? "2u" : "2b", timeout);
+
+    /// <summary>Il profilo dell'accessibilità: PDF/UA-1, quello richiesto dalle
+    /// norme europee e italiane sull'accessibilità dei documenti.</summary>
+    public const string AccessibilityFlavour = "ua1";
+
+    /// <summary>Come <see cref="Validate"/>, ma scegliendo il profilo: <c>2u</c>,
+    /// <c>2b</c> per l'archiviazione, <c>ua1</c> per l'accessibilità.</summary>
+    public static VeraPdfReport ValidateFlavour(string veraPdfPath, string pdfPath, string flavour,
         TimeSpan? timeout = null)
     {
-        var flavour = level == PdfALevel.A2u ? "2u" : "2b";
         try
         {
             var startInfo = new ProcessStartInfo(veraPdfPath)

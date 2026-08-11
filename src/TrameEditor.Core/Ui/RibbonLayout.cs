@@ -108,6 +108,7 @@ public sealed class RibbonLayout
                     new RibbonItem("export-pdf", large: true),
                     new RibbonItem("export-html", large: true),
                     new RibbonItem("pdfa", large: true),
+                    new RibbonItem("pdfua"),
                     new RibbonItem("images-to-pdf"),
                     new RibbonItem("export-images"),
                     new RibbonItem("export-text")),

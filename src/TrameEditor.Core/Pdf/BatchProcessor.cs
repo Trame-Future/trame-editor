@@ -4,12 +4,23 @@ using Path = System.IO.Path;
 namespace TrameEditor.Core.Pdf;
 
 /// <summary>La "ricetta": i passi da applicare a ogni PDF, nell'ordine sensato
-/// OCR → Anonimizza → Comprimi → Proteggi.</summary>
+/// OCR → Anonimizza → Comprimi → PDF/A → Proteggi.</summary>
+/// <param name="ConvertToPdfA">Conversione in PDF/A-2 come ultimo passo, solo per
+/// via <b>fedele</b>: rasterizzare cinquanta file senza guardarli, perdendo il
+/// testo, non è una cosa da fare in serie. I file che non si possono convertire
+/// fedelmente vengono segnalati, da aprire uno per uno.</param>
 public sealed record BatchRecipe(
     bool RunOcr,
     bool Redact,
     bool Compress,
-    string? ProtectPassword);
+    string? ProtectPassword,
+    bool ConvertToPdfA = false)
+{
+    /// <summary>Un PDF/A non può essere cifrato: lo dice lo standard. Se sono
+    /// chiesti entrambi la ricetta è contraddittoria e va fermata prima, non
+    /// risolta di nascosto scegliendo noi quale dei due sacrificare.</summary>
+    public bool IsContradictory => ConvertToPdfA && !string.IsNullOrEmpty(ProtectPassword);
+}
 
 public sealed record BatchFileResult(
     string SourcePath,
@@ -32,6 +43,10 @@ public static class BatchProcessor
         var tempFiles = new List<string>();
         try
         {
+            if (recipe.IsContradictory)
+                return new BatchFileResult(sourcePath, null, false,
+                    "PDF/A e password si escludono: un file cifrato non è un PDF/A");
+
             if (PdfCryptoService.IsPasswordProtected(sourcePath))
                 return new BatchFileResult(sourcePath, null, false,
                     "protetto da password: saltato (aprilo singolarmente)");
@@ -74,6 +89,32 @@ public static class BatchProcessor
                 var compression = PdfCompressor.Compress(current, step);
                 current = step;
                 notes.Add($"compresso {compression.BeforeBytes / 1024:N0}→{compression.AfterBytes / 1024:N0} KB");
+            }
+
+            if (recipe.ConvertToPdfA)
+            {
+                var step = NextTemp(tempFiles);
+                PdfAConversionResult conversion;
+                try
+                {
+                    conversion = PdfAConverter.ConvertFaithfully(current, step,
+                        Path.GetFileNameWithoutExtension(sourcePath));
+                }
+                catch (PdfAConversionException ex)
+                {
+                    // Meglio nessun file che un file spacciato per PDF/A: chi
+                    // deve depositare a norma non deve accorgersene dopo.
+                    return new BatchFileResult(sourcePath, null, false,
+                        "PDF/A non possibile per via fedele — "
+                        + ex.Message.Replace(Environment.NewLine, " ").Replace("• ", "")
+                        + " (aprilo singolarmente per convertirlo per immagine)");
+                }
+
+                current = step;
+                var livello = conversion.Level == PdfALevel.A2u ? "PDF/A-2u" : "PDF/A-2b";
+                notes.Add(conversion.VerificationClean
+                    ? $"convertito in {livello}"
+                    : $"convertito in {livello}, con residui alla verifica interna");
             }
 
             if (!string.IsNullOrEmpty(recipe.ProtectPassword))
