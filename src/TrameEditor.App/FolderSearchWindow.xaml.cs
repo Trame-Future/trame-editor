@@ -25,6 +25,14 @@ public partial class FolderSearchWindow : Window
     /// <summary>Chiesto di aprire un risultato: il file e la pagina.</summary>
     public event Action<string, int>? OpenRequested;
 
+    /// <summary>Parte con la cartella già scelta (arrivo dal menu di Esplora risorse).</summary>
+    public void Preset(string folder)
+    {
+        _folder = folder;
+        FolderText.Text = folder;
+        Loaded += (_, _) => QueryBox.Focus();
+    }
+
     private void PickFolder_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog { Title = "Cartella con i PDF in cui cercare" };

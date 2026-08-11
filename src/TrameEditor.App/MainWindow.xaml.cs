@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using TrameEditor.App.Services;
 using TrameEditor.App.ViewModels;
+using TrameEditor.Core.Shell;
 using TrameEditor.Core.Ui;
 
 namespace TrameEditor.App;
@@ -23,20 +24,63 @@ public partial class MainWindow : Fluent.RibbonWindow
         BindCommands();
         _ui.BuildMenuBar(ClassicMenu, DecorateMenu);
         _ui.BuildRibbon(RibbonBar, _ribbonLayout);
-        Loaded += (_, _) =>
+        Loaded += async (_, _) => await StartAsync();
+    }
+
+    /// <summary>
+    /// Che cosa fare all'avvio: aprire i file passati sulla riga di comando,
+    /// eseguire l'azione chiesta dal menu contestuale di Esplora risorse,
+    /// oppure — se non è stato chiesto niente — riprendere da dove si era rimasti.
+    /// </summary>
+    private async Task StartAsync()
+    {
+        var restoredDrafts = _viewModel.TryRestoreDrafts();
+        var request = StartupArguments.Parse(Environment.GetCommandLineArgs().Skip(1));
+
+        switch (request.Verb)
         {
-            var restoredDrafts = _viewModel.TryRestoreDrafts();
-            var args = Environment.GetCommandLineArgs().Skip(1).Where(File.Exists).ToList();
-            if (args.Count > 0)
-            {
-                foreach (var path in args)
-                    _viewModel.OpenPath(path);
-            }
-            else if (!restoredDrafts)
-            {
+            case StartupVerb.SearchFolder when Directory.Exists(request.FirstPath):
+                _viewModel.ShowFolderSearch(request.FirstPath);
+                return;
+
+            case StartupVerb.ExtractSigned when Directory.Exists(request.FirstPath):
+                _viewModel.ShowBatch(request.FirstPath);
+                return;
+        }
+
+        var files = request.Paths.Where(File.Exists).ToList();
+        if (files.Count == 0)
+        {
+            if (!restoredDrafts)
                 _viewModel.RestoreSession();
-            }
-        };
+            return;
+        }
+
+        foreach (var path in files)
+            _viewModel.OpenPath(path);
+
+        await RunOnOpenedDocumentAsync(request.Verb);
+    }
+
+    /// <summary>L'azione da eseguire sul documento appena aperto. Se il
+    /// documento non la prevede non succede niente: meglio del silenzio di
+    /// un comando che finge di aver funzionato.</summary>
+    private async Task RunOnOpenedDocumentAsync(StartupVerb verb)
+    {
+        switch (verb)
+        {
+            case StartupVerb.ConvertToPdfA when _viewModel.SelectedDocument is PdfDocumentViewModel pdf:
+                await pdf.ConvertToPdfACommand.ExecuteAsync(null);
+                break;
+
+            case StartupVerb.ConvertToPdfA when _viewModel.SelectedDocument is TextDocumentViewModel text:
+                await text.ConvertToPdfACommand.ExecuteAsync(null);
+                break;
+
+            case StartupVerb.Redact when _viewModel.SelectedDocument is PdfDocumentViewModel pdf:
+                await pdf.RedactCommand.ExecuteAsync(null);
+                break;
+        }
     }
 
     protected override void OnClosing(CancelEventArgs e)

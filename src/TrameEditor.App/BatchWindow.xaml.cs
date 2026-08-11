@@ -25,6 +25,21 @@ public partial class BatchWindow : Window
     /// <summary>Vero quando è attiva la scheda "Estrai da file firmati".</summary>
     private bool ExtractMode => ModeTabs?.SelectedIndex == 1;
 
+    /// <summary>
+    /// Parte sull'estrazione dai file firmati di una cartella già scelta
+    /// (arrivo dal menu di Esplora risorse). Da chiamare prima di mostrare
+    /// la finestra: il cambio di scheda a finestra chiusa non azzera la scelta.
+    /// </summary>
+    public void PresetSignedFolder(string folder)
+    {
+        ModeTabs.SelectedIndex = 1;
+        PickFilesButton.Content = "Scegli file .p7m…";
+        _files = [.. SignedFileExtractor.FindSignedFiles(folder)];
+        FilesText.Text = _files.Length == 0
+            ? $"nessun file firmato in {Path.GetFileName(folder)}"
+            : $"{_files.Length} file da {Path.GetFileName(folder)}";
+    }
+
     private string FileFilter => ExtractMode
         ? "File firmati (*.p7m)|*.p7m|Tutti i file (*.*)|*.*"
         : "PDF (*.pdf)|*.pdf";

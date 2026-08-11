@@ -14,6 +14,23 @@
         </DockPanel>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
+                <!-- Menu contestuale di Windows -->
+                <TextBlock Text="Menu di Esplora risorse" FontWeight="Bold" FontSize="14"
+                           Foreground="{StaticResource AccentBrush}" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19" Margin="0,2,0,6">
+                    Aggiunge le voci di TrameEditor al menu che compare col <Bold>tasto destro</Bold>
+                    sui file (PDF, .p7m, XML, testo) e sulle cartelle: aprire, convertire in PDF/A,
+                    anonimizzare, cercare nei PDF della cartella, estrarre dai file firmati.<LineBreak />
+                    Sono solo voci di menu: <Bold>il programma predefinito per i PDF non cambia</Bold>.
+                    Vengono scritte solo per il tuo utente, senza diritti di amministratore.
+                </TextBlock>
+                <CheckBox x:Name="ShellMenuCheck" FontSize="12" FontWeight="SemiBold"
+                          Content="Mostra TrameEditor nel menu del tasto destro"
+                          Checked="ShellMenu_Changed" Unchecked="ShellMenu_Changed" />
+                <TextBlock x:Name="ShellMenuStatus" TextWrapping="Wrap" FontSize="11"
+                           Margin="0,4,0,0" Foreground="{StaticResource TextMutedBrush}" />
+                <Separator Margin="0,16,0,0" />
+
                 <!-- Connessione -->
                 <TextBlock Text="Connessione a Ollama" FontWeight="Bold" FontSize="14"
                            Foreground="{StaticResource AccentBrush}" />

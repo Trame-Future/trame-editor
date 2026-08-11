@@ -3,12 +3,14 @@ using TrameEditor.App.Services;
 using TrameEditor.Core.Ai;
 using TrameEditor.Core.Pdf;
 using TrameEditor.Core.Session;
+using TrameEditor.Core.Shell;
 
 namespace TrameEditor.App;
 
 public partial class SettingsWindow : Window
 {
     private bool _installing;
+    private bool _readingShellMenu;
 
     public SettingsWindow()
     {
@@ -18,6 +20,7 @@ public partial class SettingsWindow : Window
         VeraPdfBox.Text = settings.VeraPdfPath;
         Loaded += (_, _) =>
         {
+            ShowShellMenuStatus();
             ShowRequirements();
             ShowVeraPdfStatus();
         };
@@ -25,6 +28,56 @@ public partial class SettingsWindow : Window
 
     public static void ShowEditor() =>
         new SettingsWindow { Owner = Application.Current.MainWindow }.ShowDialog();
+
+    /// <summary>Il percorso dell'eseguibile da scrivere nel registro.</summary>
+    private static string ExecutablePath => Environment.ProcessPath
+        ?? System.Reflection.Assembly.GetEntryAssembly()?.Location
+        ?? "TrameEditor.exe";
+
+    private void ShowShellMenuStatus()
+    {
+        var presente = ExplorerIntegration.IsPresent();
+        var aggiornato = ExplorerIntegration.IsInstalled(ExecutablePath);
+
+        // La spunta la stiamo mettendo noi: non deve rimbalzare nel gestore.
+        _readingShellMenu = true;
+        ShellMenuCheck.IsChecked = presente;
+        _readingShellMenu = false;
+
+        ShellMenuStatus.Text = (presente, aggiornato) switch
+        {
+            (false, _) => "Le voci non ci sono. Su Windows 11 compaiono sotto \"Mostra altre opzioni\".",
+            (true, true) => "✓ Voci attive. Su Windows 11 sono sotto \"Mostra altre opzioni\".",
+            (true, false) => "⚠ Le voci puntano a un'altra copia del programma: togli e rimetti la spunta "
+                             + "per aggiornarle a quella che stai usando.",
+        };
+    }
+
+    /// <summary>
+    /// Sui due eventi della spunta, non su Click: così vale anche quando la
+    /// commutazione arriva da una tecnologia assistiva, che Click non lo genera.
+    /// </summary>
+    private void ShellMenu_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_readingShellMenu)
+            return;
+
+        try
+        {
+            if (ShellMenuCheck.IsChecked == true)
+                ExplorerIntegration.Install(ExecutablePath);
+            else
+                ExplorerIntegration.Uninstall();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this,
+                "Non sono riuscito a cambiare le voci del menu: " + ex.Message,
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        ShowShellMenuStatus();
+    }
 
     private void ShowRequirements()
     {

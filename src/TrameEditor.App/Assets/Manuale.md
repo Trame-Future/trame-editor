@@ -38,6 +38,25 @@ TrameEditor a tenerla al passo.
 > `%APPDATA%\TrameEditor\barra-multifunzione.json`. Finché non tocchi niente il file
 > non esiste nemmeno.
 
+### Il tasto destro su file e cartelle
+
+TrameEditor può aggiungersi al menu che compare col **tasto destro** in Esplora risorse:
+
+- su un **PDF**: *Apri con TrameEditor*, *Converti in PDF/A*, *Anonimizza*;
+- su un **.p7m**, un **XML** di fattura, un **.txt** o un **.md**: *Apri con TrameEditor*;
+- su una **cartella**: *Cerca nei PDF di questa cartella* e *Estrai dai file firmati (.p7m)*.
+
+Si attiva dall'installazione, oppure in qualsiasi momento da **Strumenti → Impostazioni →
+Menu di Esplora risorse**, dove si toglie con la stessa spunta.
+
+> Sono **voci di menu, non associazioni**: il programma con cui i PDF si aprono facendo
+> doppio clic **non cambia**. Vengono scritte solo per il tuo utente e non servono diritti
+> di amministratore.
+>
+> **Su Windows 11** le voci stanno sotto **"Mostra altre opzioni"** (o Maiusc+F10): il menu
+> breve accetta solo le estensioni installate dallo Store, e TrameEditor non è distribuito
+> in quel modo.
+
 ---
 
 ## Aprire e salvare

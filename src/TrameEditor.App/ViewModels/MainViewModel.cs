@@ -552,7 +552,11 @@ public partial class MainViewModel : ObservableObject
     /// <summary>Cerca una parola dentro tutti i PDF di una cartella; dai risultati
     /// si apre il documento alla pagina giusta.</summary>
     [RelayCommand]
-    private void SearchInFolder()
+    private void SearchInFolder() => ShowFolderSearch(null);
+
+    /// <summary>Con <paramref name="folder"/> valorizzato la cartella è già
+    /// scelta: è la voce "Cerca nei PDF di questa cartella" di Esplora risorse.</summary>
+    public void ShowFolderSearch(string? folder)
     {
         var window = new FolderSearchWindow { Owner = Application.Current.MainWindow };
         window.OpenRequested += (path, page) =>
@@ -561,12 +565,23 @@ public partial class MainViewModel : ObservableObject
             if (SelectedDocument is PdfDocumentViewModel pdf)
                 pdf.GoToPage(page);
         };
+        if (folder is not null)
+            window.Preset(folder);
         window.Show();
     }
 
     [RelayCommand]
-    private void OpenBatch() =>
-        new BatchWindow { Owner = Application.Current.MainWindow }.Show();
+    private void OpenBatch() => ShowBatch(null);
+
+    /// <summary>Con <paramref name="signedFolder"/> valorizzato si parte
+    /// dall'estrazione dai file firmati di quella cartella.</summary>
+    public void ShowBatch(string? signedFolder)
+    {
+        var window = new BatchWindow { Owner = Application.Current.MainWindow };
+        if (signedFolder is not null)
+            window.PresetSignedFolder(signedFolder);
+        window.Show();
+    }
 
     [RelayCommand]
     private void MergePdfs()
