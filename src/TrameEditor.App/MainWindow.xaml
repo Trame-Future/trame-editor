@@ -10,6 +10,15 @@
         Background="{StaticResource ChromeBrush}"
         UseLayoutRounding="True"
         AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver">
+    <fluent:RibbonWindow.Resources>
+        <!-- Voci del sottomenu "Apri recenti": l'elenco arriva da RecentFiles -->
+        <Style x:Key="RecentFileItem" TargetType="MenuItem">
+            <Setter Property="Header" Value="{Binding}" />
+            <Setter Property="Command"
+                    Value="{Binding DataContext.OpenRecentCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+            <Setter Property="CommandParameter" Value="{Binding}" />
+        </Style>
+    </fluent:RibbonWindow.Resources>
     <fluent:RibbonWindow.CommandBindings>
         <CommandBinding Command="Help" Executed="Help_Executed" />
     </fluent:RibbonWindow.CommandBindings>
@@ -22,249 +31,12 @@
         <KeyBinding Modifiers="Control" Key="P" Command="{Binding PrintCommand}" />
     </fluent:RibbonWindow.InputBindings>
     <DockPanel>
-        <fluent:Ribbon DockPanel.Dock="Top">
-            <fluent:Ribbon.Menu>
-                <fluent:ApplicationMenu Header="File" MinWidth="240">
-                    <fluent:MenuItem Header="Nuovo" InputGestureText="Ctrl+N"
-                                     Command="{Binding NewDocumentCommand}" />
-                    <fluent:MenuItem Header="Apri…" InputGestureText="Ctrl+O"
-                                     Command="{Binding OpenFileCommand}" />
-                    <fluent:MenuItem Header="Recenti" ItemsSource="{Binding RecentFiles}">
-                        <fluent:MenuItem.ItemContainerStyle>
-                            <Style TargetType="{x:Type fluent:MenuItem}">
-                                <Setter Property="Header" Value="{Binding}" />
-                                <Setter Property="Command"
-                                        Value="{Binding DataContext.OpenRecentCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                <Setter Property="CommandParameter" Value="{Binding}" />
-                            </Style>
-                        </fluent:MenuItem.ItemContainerStyle>
-                    </fluent:MenuItem>
-                    <Separator />
-                    <fluent:MenuItem Header="Salva" InputGestureText="Ctrl+S"
-                                     Command="{Binding SaveCommand}" />
-                    <fluent:MenuItem Header="Salva con nome…" InputGestureText="Ctrl+Maiusc+S"
-                                     Command="{Binding SaveAsCommand}" />
-                    <fluent:MenuItem Header="Stampa…" InputGestureText="Ctrl+P"
-                                     Command="{Binding PrintCommand}" />
-                    <Separator />
-                    <fluent:MenuItem Header="Esporta anteprima HTML…"
-                                     Command="{Binding ExportHtmlCommand}" />
-                    <fluent:MenuItem Header="Esporta PDF…"
-                                     Command="{Binding ExportPdfCommand}" />
-                    <fluent:MenuItem Header="Converti in PDF/A… (archiviazione)"
-                                     Command="{Binding SelectedDocument.ConvertToPdfACommand}"
-                                     ToolTip="Salva una copia in PDF/A-2, il formato per l'archiviazione a lungo termine" />
-                    <fluent:MenuItem Header="Unisci PDF…"
-                                     Command="{Binding MergePdfsCommand}" />
-                    <Separator />
-                    <fluent:MenuItem Header="Impostazioni…" Click="Settings_Click"
-                                     ToolTip="Assistente AI e validatore PDF/A: requisiti, installazione, percorsi" />
-                    <Separator />
-                    <fluent:MenuItem Header="Chiudi scheda" InputGestureText="Ctrl+W"
-                                     Command="{Binding CloseActiveDocumentCommand}" />
-                    <fluent:MenuItem Header="Guida" InputGestureText="F1" Command="Help" />
-                    <fluent:MenuItem Header="Informazioni su TrameEditor…" Click="About_Click" />
-                    <fluent:MenuItem Header="Esci" Click="Exit_Click" />
-                </fluent:ApplicationMenu>
-            </fluent:Ribbon.Menu>
+        <!-- Menu classico e barra multifunzione sono costruiti a runtime dallo
+             stesso catalogo di comandi (Services/UiComposer): il menu è sempre
+             completo, la barra è personalizzabile. -->
+        <Menu x:Name="ClassicMenu" DockPanel.Dock="Top" Style="{StaticResource ClassicMenuBar}" />
 
-            <fluent:RibbonTabItem Header="Home">
-                <fluent:RibbonGroupBox Header="Documento">
-                    <fluent:Button Header="Nuovo" Focusable="False" ToolTip="Nuovo documento (Ctrl+N)"
-                                   Command="{Binding NewDocumentCommand}">
-                        <fluent:Button.LargeIcon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
-                                       Foreground="{StaticResource AccentBrush}" Text="&#xE7C3;" />
-                        </fluent:Button.LargeIcon>
-                    </fluent:Button>
-                    <fluent:Button Header="Apri" Focusable="False" ToolTip="Apri file (Ctrl+O)"
-                                   Command="{Binding OpenFileCommand}">
-                        <fluent:Button.LargeIcon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
-                                       Foreground="{StaticResource AccentBrush}" Text="&#xE8E5;" />
-                        </fluent:Button.LargeIcon>
-                    </fluent:Button>
-                    <fluent:Button Header="Salva" Focusable="False" ToolTip="Salva (Ctrl+S)"
-                                   Command="{Binding SaveCommand}">
-                        <fluent:Button.LargeIcon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
-                                       Foreground="{StaticResource AccentBrush}" Text="&#xE74E;" />
-                        </fluent:Button.LargeIcon>
-                    </fluent:Button>
-                    <fluent:Button Header="Salva con nome" Size="Middle" Focusable="False"
-                                   Command="{Binding SaveAsCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE792;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Chiudi scheda" Size="Middle" Focusable="False"
-                                   Command="{Binding CloseActiveDocumentCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE711;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Stampa" Size="Middle" Focusable="False"
-                                   ToolTip="Stampa il documento aperto (Ctrl+P)"
-                                   Command="{Binding PrintCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE749;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                </fluent:RibbonGroupBox>
-
-                <fluent:RibbonGroupBox Header="Modifica">
-                    <fluent:Button Header="Annulla" Size="Middle" Focusable="False" Command="Undo">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE7A7;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Ripeti" Size="Middle" Focusable="False" Command="Redo">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE7A6;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Trova" Size="Middle" Focusable="False" Command="Find">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE721;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                </fluent:RibbonGroupBox>
-
-                <fluent:RibbonGroupBox Header="Visualizza">
-                    <fluent:CheckBox Header="A capo automatico" IsChecked="{Binding WordWrap}" />
-                    <fluent:CheckBox Header="Numeri di riga" IsChecked="{Binding ShowLineNumbers}" />
-                    <fluent:CheckBox Header="Anteprima Markdown"
-                                     IsChecked="{Binding SelectedDocument.ShowPreview}" />
-                </fluent:RibbonGroupBox>
-
-                <fluent:RibbonGroupBox Header="Strumenti">
-                    <fluent:Button Header="Unisci PDF" Focusable="False"
-                                   ToolTip="Unisci più PDF in un unico file"
-                                   Command="{Binding MergePdfsCommand}">
-                        <fluent:Button.LargeIcon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
-                                       Foreground="{StaticResource AccentBrush}" Text="&#xEA37;" />
-                        </fluent:Button.LargeIcon>
-                    </fluent:Button>
-                    <fluent:Button Header="Esporta HTML" Focusable="False"
-                                   ToolTip="Esporta l'anteprima Markdown come pagina HTML"
-                                   Command="{Binding ExportHtmlCommand}">
-                        <fluent:Button.LargeIcon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
-                                       Foreground="{StaticResource AccentBrush}" Text="&#xE774;" />
-                        </fluent:Button.LargeIcon>
-                    </fluent:Button>
-                    <fluent:Button Header="Esporta PDF" Focusable="False"
-                                   ToolTip="Converte il documento Markdown in un PDF"
-                                   Command="{Binding ExportPdfCommand}">
-                        <fluent:Button.LargeIcon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
-                                       Foreground="{StaticResource AccentBrush}" Text="&#xE8A5;" />
-                        </fluent:Button.LargeIcon>
-                    </fluent:Button>
-                    <fluent:Button Header="Immagini in PDF" Size="Middle" Focusable="False"
-                                   ToolTip="Unisce una o più immagini in un PDF"
-                                   Command="{Binding ImagesToPdfCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE91B;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Esporta immagini" Size="Middle" Focusable="False"
-                                   ToolTip="Salva ogni pagina del PDF aperto come immagine PNG"
-                                   Command="{Binding SelectedDocument.ExportImagesCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE78A;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Esporta testo" Size="Middle" Focusable="False"
-                                   ToolTip="Estrae il testo del PDF aperto in un file .txt"
-                                   Command="{Binding SelectedDocument.ExportTextCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE8A4;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Confronta documenti" Size="Middle" Focusable="False"
-                                   ToolTip="Confronta il testo di due versioni di un documento (PDF, testo o Markdown, anche misti)"
-                                   Command="{Binding CompareDocumentsCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontSize="13" Text="⇄" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Numeri e filigrana" Size="Middle" Focusable="False"
-                                   ToolTip="Aggiungi numeri di pagina, una filigrana o intestazioni al PDF aperto"
-                                   Command="{Binding SelectedDocument.DecorateCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE8A1;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Cerca in cartella" Size="Middle" Focusable="False"
-                                   ToolTip="Cerca una parola o un codice dentro tutti i PDF di una cartella"
-                                   Command="{Binding SearchInFolderCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE721;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Ricette" Size="Middle" Focusable="False"
-                                   ToolTip="Molti file in una volta: ricetta sui PDF, oppure estrazione dai file firmati (.p7m)"
-                                   Command="{Binding OpenBatchCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontSize="13" Text="⚙" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Impostazioni" Size="Middle" Focusable="False"
-                                   ToolTip="Componenti opzionali: assistente AI (Ollama) e validatore PDF/A (veraPDF) — requisiti, installazione automatica, percorsi"
-                                   Click="Settings_Click">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE713;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="I miei dati" Size="Middle" Focusable="False"
-                                   ToolTip="I tuoi dati per la compilazione automatica dei moduli (cifrati sul PC)"
-                                   Click="Profile_Click">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE77B;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Firme" Size="Middle" Focusable="False"
-                                   ToolTip="Chi ha firmato questo PDF, quando, e se il documento è ancora quello firmato"
-                                   Command="{Binding SelectedDocument.ShowSignaturesCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE8A9;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Converti in PDF/A" Size="Middle" Focusable="False"
-                                   ToolTip="Salva una copia in PDF/A-2, il formato per l'archiviazione a lungo termine"
-                                   Command="{Binding SelectedDocument.ConvertToPdfACommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE81C;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                    <fluent:Button Header="Proteggi PDF" Size="Middle" Focusable="False"
-                                   ToolTip="Salva una copia del PDF protetta da password (AES-256)"
-                                   Command="{Binding SelectedDocument.ProtectCommand}">
-                        <fluent:Button.Icon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE72E;" />
-                        </fluent:Button.Icon>
-                    </fluent:Button>
-                </fluent:RibbonGroupBox>
-
-                <fluent:RibbonGroupBox Header="Informazioni">
-                    <fluent:Button Header="Guida" Focusable="False"
-                                   ToolTip="Apri la guida di TrameEditor (F1)" Command="Help">
-                        <fluent:Button.LargeIcon>
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
-                                       Foreground="{StaticResource AccentBrush}" Text="&#xE897;" />
-                        </fluent:Button.LargeIcon>
-                    </fluent:Button>
-                    <fluent:Button Header="Trame Future" Focusable="False"
-                                   ToolTip="Informazioni su TrameEditor" Click="About_Click">
-                        <fluent:Button.LargeIcon>
-                            <Image Source="Assets/icon-256.png" Width="32" Height="32" />
-                        </fluent:Button.LargeIcon>
-                    </fluent:Button>
-                </fluent:RibbonGroupBox>
-            </fluent:RibbonTabItem>
-        </fluent:Ribbon>
+        <fluent:Ribbon x:Name="RibbonBar" DockPanel.Dock="Top" />
 
         <StatusBar DockPanel.Dock="Bottom" Style="{StaticResource OfficeStatusBar}">
             <StatusBarItem>

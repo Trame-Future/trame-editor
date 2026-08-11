@@ -8,9 +8,41 @@ Funziona tutto **sul tuo computer**: nessun account, nessun caricamento su inter
 
 ---
 
+## Trovare i comandi: il menu e la barra
+
+Le funzioni si raggiungono in due modi, e sono le stesse.
+
+- Il **menu classico** in alto — *File, Modifica, Visualizza, Pagine, Converti,
+  Sicurezza, Strumenti, ?* — contiene **tutte** le funzioni, sempre. Si apre anche
+  con Alt più la lettera sottolineata (Alt+F per File). Le voci che non valgono per
+  il documento aperto (ruotare le pagine di un file di testo) sono grigie.
+- La **barra multifunzione** sotto tiene a portata di clic quelle che usi di più,
+  divise nelle schede *Home* e *Strumenti*.
+
+### Personalizzare la barra multifunzione
+
+**Visualizza → Personalizza la barra multifunzione…** apre una finestra con, a
+sinistra, tutte le funzioni raggruppate come nei menu e, a destra, la barra: schede,
+riquadri e pulsanti. Puoi aggiungere e togliere pulsanti, spostarli, creare schede e
+riquadri nuovi, rinominarli e scegliere se un pulsante è grande o piccolo.
+
+Togliere un pulsante dalla barra **non toglie la funzione**: resta nel menu classico.
+
+Se la barra non ti piace più, **Ripristina impostazioni predefinite** (nella stessa
+finestra, oppure *Visualizza → Ripristina la barra predefinita*) la rimette come era
+all'installazione. Da quel momento la barra torna anche ad aggiornarsi da sola con le
+funzioni aggiunte dai prossimi aggiornamenti: finché non la personalizzi, è
+TrameEditor a tenerla al passo.
+
+> La personalizzazione è tua e sta in un file leggibile:
+> `%APPDATA%\TrameEditor\barra-multifunzione.json`. Finché non tocchi niente il file
+> non esiste nemmeno.
+
+---
+
 ## Aprire e salvare
 
-- **Apri** (Ctrl+O), trascina i file sulla finestra, oppure **File → Recenti**.
+- **Apri** (Ctrl+O), trascina i file sulla finestra, oppure **File → Apri recenti**.
 - All'avvio l'app **riapre i file dell'ultima sessione**.
 - **Salva** (Ctrl+S) e **Salva con nome** (Ctrl+Maiusc+S). Per i PDF, "Salva con nome" applica tutte le modifiche in sospeso (pagine, testo, annotazioni).
 - **Stampa** con Ctrl+P.
@@ -25,11 +57,11 @@ Funziona tutto **sul tuo computer**: nessun account, nessun caricamento su inter
 
 Da un documento di testo o Markdown puoi produrre direttamente un PDF:
 
-- **Esporta PDF** (gruppo Strumenti, o *File → Esporta PDF…*) salva una copia in PDF.
+- **Esporta PDF** (menu *Converti → Esporta in PDF…*) salva una copia in PDF.
   Il **Markdown** viene impaginato come lo vedi nell'anteprima; un **.txt** resta testo
   semplice a spaziatura fissa — un asterisco resta un asterisco e una riga che comincia
   con `#` non diventa un titolo.
-- **Converti in PDF/A** (stesso gruppo, o *File → Converti in PDF/A…*) salta il passaggio
+- **Converti in PDF/A** (menu *Converti → Converti in PDF/A…*) salta il passaggio
   intermedio e ti dà direttamente il formato per l'**archiviazione a lungo termine**,
   con lo stesso rapporto preventivo dei PDF.
 
@@ -37,7 +69,7 @@ Da un documento di testo o Markdown puoi produrre direttamente un PDF:
 
 - **Anteprima affiancata** in tempo reale (pulsante "Anteprima" nella barra del documento).
 - Toolbar di formattazione: grassetto, corsivo, titoli, elenchi, citazioni, link, tabelle.
-- **Esporta HTML** ed **Esporta PDF** dal gruppo Strumenti del ribbon.
+- **Esporta HTML** ed **Esporta PDF** dal menu **Converti** (o dalla scheda Strumenti della barra).
 - La stampa usa la resa dell'anteprima (se l'anteprima è attiva).
 
 ## PDF — visualizzare
@@ -52,7 +84,7 @@ Seleziona le pagine dalle miniature, poi:
 
 - **⟲ / ⟳** ruota — **Elimina** — **▲/▼** sposta — **Estrai…** crea un nuovo PDF con le pagine scelte.
 - Puoi anche **riordinare trascinando le miniature**.
-- **Unisci PDF** (ribbon → Strumenti) combina più file in uno.
+- **Unisci PDF** (menu **Pagine**) combina più file in uno.
 - Le modifiche restano "in sospeso" finché non usi **Salva con nome**.
 
 ## PDF — modificare il testo
@@ -86,7 +118,7 @@ Seleziona le pagine dalle miniature, poi:
 
 Nel pannello **Modulo** il pulsante **"⚡ Compila per me"** riempie i campi al posto tuo:
 
-1. La prima volta compili la scheda **"I miei dati"** (ribbon → Strumenti): nome, codice
+1. La prima volta compili la scheda **"I miei dati"** (menu **Sicurezza**): nome, codice
    fiscale, indirizzo, IBAN, contatti… Solo i campi che vuoi.
 2. I dati restano **solo sul tuo computer**, cifrati con la protezione dell'account Windows —
    niente cloud, niente password da ricordare.
@@ -231,7 +263,7 @@ nell'editor, comprese le modifiche non ancora salvate.
 - Facoltativo: `ollama pull nomic-embed-text` migliora la ricerca del contesto
   nei documenti lunghi.
 
-**Installazione e configurazione: tutto dall'app.** Ribbon → Strumenti →
+**Installazione e configurazione: tutto dall'app.** Menu **Strumenti** →
 **Impostazioni**: la finestra verifica se il tuo PC ha i requisiti, e col pulsante
 **"Installa e configura tutto automaticamente"** scarica Ollama e il modello al
 posto tuo (serve internet solo per questa operazione: dopo, l'AI funziona per
@@ -252,7 +284,7 @@ da cambiare solo se gira su un'altra porta o su un altro PC della rete.
 
 ## Confronta due documenti ⇄
 
-**Ribbon → Strumenti → Confronta documenti**: scegli due versioni e vedi riga per riga
+**Menu **Strumenti → Confronta due documenti** (o la scheda Strumenti della barra)**: scegli due versioni e vedi riga per riga
 cosa è stato **aggiunto** (verde) e **rimosso** (rosso). Funziona su **PDF, testo e
 Markdown**, e anche fra tipi diversi (per esempio un PDF contro il suo sorgente .md):
 il confronto guarda il testo, non il formato — e non guarda la grafica.
@@ -263,7 +295,7 @@ salvare un **rapporto HTML** da allegare o archiviare.
 
 ## Numeri di pagina, filigrana, intestazioni 🔢
 
-**Ribbon → Strumenti → Numeri e filigrana**. Puoi aggiungere, insieme o separatamente:
+**Menu **Strumenti → Numeri di pagina e filigrana** (o la scheda Strumenti della barra)**. Puoi aggiungere, insieme o separatamente:
 
 - **numeri di pagina** — formato libero (`{n}` è il numero, `{tot}` il totale), posizione a
   scelta, numerazione che può cominciare da un numero diverso e saltare la copertina;
@@ -276,7 +308,7 @@ in PDF/A.
 
 ## Cerca in una cartella di PDF 🔎
 
-**Ribbon → Strumenti → Cerca in cartella**: scegli una cartella e una parola (o un codice
+**Menu **Modifica → Cerca in una cartella di PDF** (o la scheda Strumenti della barra)**: scegli una cartella e una parola (o un codice
 fiscale, un numero di fattura…) e TrameEditor guarda dentro **tutti** i PDF, anche nelle
 sottocartelle se lo chiedi. I risultati mostrano file, pagina e la frase intorno; doppio
 clic apre il documento a quella pagina.
@@ -287,7 +319,7 @@ documenti in cui la parola non c'è.
 
 ## Ricette (molti file in una volta) ⚙
 
-**Ribbon → Strumenti → Ricette**. Due modi di lavorare a mucchi:
+**Menu **Strumenti → Ricette** (o la scheda Strumenti della barra)**. Due modi di lavorare a mucchi:
 
 **Ricetta sui PDF** — scegli tanti PDF (o una cartella) e applica a tutti la stessa
 sequenza: **OCR → Anonimizza → Comprimi → Proteggi con password** (solo i passi che
@@ -314,6 +346,7 @@ cartella che scegli, e i nomi già presenti non vengono sovrascritti.
 | Ctrl+W | Chiudi scheda |
 | Ctrl+Z / Ctrl+Y | Annulla / Ripeti |
 | Ctrl+rotellina | Zoom PDF |
+| Alt+F, Alt+M, Alt+V… | Apre i menu (File, Modifica, Visualizza…) |
 | F1 | Questa guida |
 
 ---

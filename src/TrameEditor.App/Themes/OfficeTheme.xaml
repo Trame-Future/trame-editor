@@ -190,6 +190,15 @@
     </Style>
 
     <!-- Barra di stato blu (come Word) -->
+    <!-- Menu classico: la barra File / Modifica / Visualizza … sopra la barra multifunzione -->
+    <Style x:Key="ClassicMenuBar" TargetType="Menu">
+        <Setter Property="Background" Value="{StaticResource BandBrush}" />
+        <Setter Property="Padding" Value="4,1" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="BorderBrush" Value="#E1DFDD" />
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+
     <Style x:Key="OfficeStatusBar" TargetType="StatusBar">
         <Setter Property="Background" Value="{StaticResource AccentBrush}" />
         <Setter Property="Foreground" Value="White" />
