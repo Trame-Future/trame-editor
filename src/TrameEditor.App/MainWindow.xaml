@@ -190,8 +190,22 @@
                             <TextBlock FontSize="13" Text="⇄" />
                         </fluent:Button.Icon>
                     </fluent:Button>
+                    <fluent:Button Header="Numeri e filigrana" Size="Middle" Focusable="False"
+                                   ToolTip="Aggiungi numeri di pagina, una filigrana o intestazioni al PDF aperto"
+                                   Command="{Binding SelectedDocument.DecorateCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE8A1;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
+                    <fluent:Button Header="Cerca in cartella" Size="Middle" Focusable="False"
+                                   ToolTip="Cerca una parola o un codice dentro tutti i PDF di una cartella"
+                                   Command="{Binding SearchInFolderCommand}">
+                        <fluent:Button.Icon>
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE721;" />
+                        </fluent:Button.Icon>
+                    </fluent:Button>
                     <fluent:Button Header="Ricette" Size="Middle" Focusable="False"
-                                   ToolTip="Applica OCR/Anonimizza/Comprimi/Proteggi a molti PDF in serie"
+                                   ToolTip="Molti file in una volta: ricetta sui PDF, oppure estrazione dai file firmati (.p7m)"
                                    Command="{Binding OpenBatchCommand}">
                         <fluent:Button.Icon>
                             <TextBlock FontSize="13" Text="⚙" />

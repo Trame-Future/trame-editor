@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
@@ -84,7 +84,7 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>All'avvio: se ci sono bozze la sessione precedente Ã¨ stata interrotta.
+    /// <summary>All'avvio: se ci sono bozze la sessione precedente è stata interrotta.
     /// Restituisce true se l'utente le ha ripristinate.</summary>
     public bool TryRestoreDrafts()
     {
@@ -93,7 +93,7 @@ public partial class MainViewModel : ObservableObject
             return false;
 
         var answer = MessageBox.Show(
-            $"La sessione precedente si Ã¨ interrotta con {drafts.Count} " +
+            $"La sessione precedente si è interrotta con {drafts.Count} " +
             (drafts.Count == 1 ? "documento non salvato" : "documenti non salvati") +
             ".\nVuoi ripristinare le bozze?",
             "TrameEditor", MessageBoxButton.YesNo, MessageBoxImage.Warning);
@@ -134,7 +134,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Salva sessione e recenti (chiamato alla chiusura confermata).
-    /// La chiusura Ã¨ pulita: le bozze di autosalvataggio non servono piÃ¹.</summary>
+    /// La chiusura è pulita: le bozze di autosalvataggio non servono più.</summary>
     public void SaveSession()
     {
         try
@@ -149,7 +149,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch
         {
-            // la sessione Ã¨ un comfort: mai bloccare la chiusura per questo
+            // la sessione è un comfort: mai bloccare la chiusura per questo
         }
     }
 
@@ -168,14 +168,14 @@ public partial class MainViewModel : ObservableObject
             OpenPath(path);
         else
         {
-            ShowError($"Il file non esiste piÃ¹:\n{path}");
+            ShowError($"Il file non esiste più:\n{path}");
             RecentFiles.Remove(path);
         }
     }
 
     public string WindowTitle => SelectedDocument is null
         ? "TrameEditor"
-        : $"{SelectedDocument.DisplayName} â€” TrameEditor";
+        : $"{SelectedDocument.DisplayName} — TrameEditor";
 
     partial void OnSelectedDocumentChanged(DocumentTabViewModel? oldValue, DocumentTabViewModel? newValue)
     {
@@ -271,7 +271,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (InvoiceReadException ex)
         {
-            // Non è leggibile come fattura: si apre comunque il file, come testo.
+            // Non � leggibile come fattura: si apre comunque il file, come testo.
             ShowError($"{ex.Message}\n\nIl file viene aperto come documento di testo.");
             OpenAsText(path);
             return;
@@ -288,6 +288,7 @@ public partial class MainViewModel : ObservableObject
                 FatturaRenderer.ToMarkdown(invoice, Path.GetFileName(path)));
             OpenPath(readable);
             RegisterRecent(path);
+            var readableDocument = SelectedDocument;
 
             foreach (var attachment in invoice.Documenti.SelectMany(d => d.Allegati))
             {
@@ -296,6 +297,11 @@ public partial class MainViewModel : ObservableObject
                 if (Path.GetExtension(target).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
                     OpenPath(target);
             }
+
+            // Gli allegati si aprono in schede a parte, ma davanti resta la
+            // fattura: è quella che l'utente ha chiesto di vedere.
+            if (readableDocument is not null)
+                SelectedDocument = readableDocument;
         }
         catch (Exception ex)
         {
@@ -320,7 +326,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Apre una busta firmata <c>.p7m</c>: tira fuori il documento che contiene,
-    /// lo apre come un file normale e mostra chi l'ha firmato. Ãˆ il formato che
+    /// lo apre come un file normale e mostra chi l'ha firmato. È il formato che
     /// arriva di continuo dalla pubblica amministrazione e che nessun programma
     /// comune sa aprire.
     /// </summary>
@@ -359,7 +365,7 @@ public partial class MainViewModel : ObservableObject
         OpenPath(extracted);
         RegisterRecent(path);
 
-        // Il riquadro delle firme si apre quando la finestra principale è pronta:
+        // Il riquadro delle firme si apre quando la finestra principale � pronta:
         // un dialogo modale aperto mentre l'applicazione sta ancora nascendo
         // (apertura da riga di comando o da trascinamento all'avvio) resta vuoto.
         var fileName = Path.GetFileName(path);
@@ -433,7 +439,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (SelectedDocument is not TextDocumentViewModel { IsMarkdown: true } document)
         {
-            ShowError("L'export HTML Ã¨ disponibile solo per i file Markdown (.md).");
+            ShowError("L'export HTML è disponibile solo per i file Markdown (.md).");
             return;
         }
 
@@ -464,7 +470,7 @@ public partial class MainViewModel : ObservableObject
         if (SelectedDocument is not TextDocumentViewModel document)
         {
             ShowError("L'export PDF riguarda i documenti di testo e Markdown. " +
-                "Un PDF giÃ  aperto si salva con \"Salva con nome\", oppure si archivia " +
+                "Un PDF già aperto si salva con \"Salva con nome\", oppure si archivia " +
                 "con \"Converti in PDF/A\".");
             return;
         }
@@ -514,7 +520,7 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>Confronta due documenti: PDF, testo o Markdown, anche misti â€”
+    /// <summary>Confronta due documenti: PDF, testo o Markdown, anche misti —
     /// il confronto guarda il testo, non il formato.</summary>
     [RelayCommand]
     private void CompareDocuments()
@@ -541,6 +547,21 @@ public partial class MainViewModel : ObservableObject
         {
             Owner = Application.Current.MainWindow,
         }.Show();
+    }
+
+    /// <summary>Cerca una parola dentro tutti i PDF di una cartella; dai risultati
+    /// si apre il documento alla pagina giusta.</summary>
+    [RelayCommand]
+    private void SearchInFolder()
+    {
+        var window = new FolderSearchWindow { Owner = Application.Current.MainWindow };
+        window.OpenRequested += (path, page) =>
+        {
+            OpenPath(path);
+            if (SelectedDocument is PdfDocumentViewModel pdf)
+                pdf.GoToPage(page);
+        };
+        window.Show();
     }
 
     [RelayCommand]

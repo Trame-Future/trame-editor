@@ -201,7 +201,7 @@ funzionare esattamente come prima.
 
 ## PDF — altri strumenti
 
-- **Comprimi…** salva una copia alleggerita (immagini ricompresse) — utile per allegati email/PEC con limiti di peso.
+- **Comprimi…** salva una copia alleggerita (immagini ricompresse). Puoi comprimere al meglio, oppure chiedere che il file **stia sotto un certo peso** (il limite della PEC): si prova per gradi e ci si ferma appena rientra. Se nemmeno al massimo della compressione ci sta, te lo diciamo invece di far finta di esserci riusciti.
 - **Proteggi PDF** salva una copia **cifrata con password** (AES-256). ⚠️ Senza la password il file non sarà più apribile: conservala.
 - I PDF protetti si aprono normalmente: l'app chiede la password e il file originale resta cifrato.
 - **Esporta immagini** (una PNG per pagina), **Esporta testo** (.txt) e **Immagini in PDF** sono nel gruppo Strumenti.
@@ -261,13 +261,47 @@ I riferimenti seguono il tipo di documento: **pagina** per i PDF, **riga** per i
 testo. Le parti identiche lunghe vengono compresse in "⋯ N righe identiche ⋯", e puoi
 salvare un **rapporto HTML** da allegare o archiviare.
 
-## Ricette (elaborazione in serie) ⚙
+## Numeri di pagina, filigrana, intestazioni 🔢
 
-**Ribbon → Strumenti → Ricette**: scegli tanti PDF e applica a tutti la stessa
-sequenza di passi: **OCR → Anonimizza → Comprimi → Proteggi con password**
-(attivi solo quelli che ti servono). I risultati finiscono in una cartella a tua
-scelta; **gli originali non vengono mai toccati**. Ogni file riceve un esito
-dettagliato; i PDF già protetti da password vengono saltati e segnalati.
+**Ribbon → Strumenti → Numeri e filigrana**. Puoi aggiungere, insieme o separatamente:
+
+- **numeri di pagina** — formato libero (`{n}` è il numero, `{tot}` il totale), posizione a
+  scelta, numerazione che può cominciare da un numero diverso e saltare la copertina;
+- **filigrana in diagonale** — *COPIA*, *RISERVATO*, *BOZZA*…;
+- **intestazione e piè di pagina** — testo fisso in cima e in fondo a ogni pagina.
+
+Le scritte vengono sovrapposte: il contenuto originale non viene toccato, e il risultato
+va in una copia. Il carattere usato viene incorporato, quindi il file resta convertibile
+in PDF/A.
+
+## Cerca in una cartella di PDF 🔎
+
+**Ribbon → Strumenti → Cerca in cartella**: scegli una cartella e una parola (o un codice
+fiscale, un numero di fattura…) e TrameEditor guarda dentro **tutti** i PDF, anche nelle
+sottocartelle se lo chiedi. I risultati mostrano file, pagina e la frase intorno; doppio
+clic apre il documento a quella pagina.
+
+I file **senza testo** (scansioni non passate dall'OCR) vengono contati a parte e
+segnalati: in quelli non è stato possibile cercare, e non sarebbe onesto farli passare per
+documenti in cui la parola non c'è.
+
+## Ricette (molti file in una volta) ⚙
+
+**Ribbon → Strumenti → Ricette**. Due modi di lavorare a mucchi:
+
+**Ricetta sui PDF** — scegli tanti PDF (o una cartella) e applica a tutti la stessa
+sequenza: **OCR → Anonimizza → Comprimi → Proteggi con password** (solo i passi che
+servono). Ogni file riceve un esito dettagliato; i PDF già protetti vengono saltati e
+segnalati.
+
+**Estrai da file firmati (.p7m)** — metti in una cartella tutti i documenti firmati
+digitalmente e tirane fuori in un colpo solo i documenti veri, apribili con qualunque
+lettore. Per ogni file viene detto **chi ha firmato e se la firma è integra**. Se dentro
+c'è una **fattura elettronica**, oltre all'XML viene salvata anche la sua versione
+leggibile in PDF: senza quella otterresti un file illeggibile esattamente come prima.
+
+In entrambi i casi **gli originali non vengono mai toccati**: i risultati finiscono nella
+cartella che scegli, e i nomi già presenti non vengono sovrascritti.
 
 ## Scorciatoie
 

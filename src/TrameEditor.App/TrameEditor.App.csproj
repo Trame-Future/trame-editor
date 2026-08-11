@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\TrameEditor.Core\TrameEditor.Core.csproj" />
@@ -25,7 +25,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>TrameEditor</AssemblyName>
     <ApplicationIcon>Assets\trameeditor.ico</ApplicationIcon>
-    <Version>2.7.0</Version>
+    <Version>2.8.0</Version>
     <Product>TrameEditor</Product>
     <Company>Trame Future srls</Company>
   </PropertyGroup>

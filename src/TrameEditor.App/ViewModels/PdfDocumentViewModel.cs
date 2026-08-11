@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
@@ -101,8 +101,12 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     }
 
     /// <summary>Chiesta una pagina (clic su una citazione dell'assistente): la
-    /// vista scorre fin lÃ¬.</summary>
+    /// vista scorre fin lì.</summary>
     public event EventHandler<int>? PageRequested;
+
+    /// <summary>Porta la vista alla pagina indicata (1-based): serve anche ai
+    /// risultati della ricerca in cartella.</summary>
+    public void GoToPage(int pageNumber) => PageRequested?.Invoke(this, pageNumber);
 
     public static PdfDocumentViewModel CreateFromFile(string path) =>
         CreateFromFile(path, path);
@@ -131,7 +135,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         var targets = SelectedPages();
         if (targets.Count == 0)
         {
-            ShowInfo("Seleziona una o piÃ¹ pagine dalle miniature a sinistra.");
+            ShowInfo("Seleziona una o più pagine dalle miniature a sinistra.");
             return;
         }
         foreach (var page in targets)
@@ -145,7 +149,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         var targets = SelectedPages();
         if (targets.Count == 0)
         {
-            ShowInfo("Seleziona una o piÃ¹ pagine dalle miniature a sinistra.");
+            ShowInfo("Seleziona una o più pagine dalle miniature a sinistra.");
             return;
         }
         if (targets.Count == Pages.Count)
@@ -285,7 +289,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     private static string TrimSnippet(string text) =>
         text.Length <= 70 ? text : text[..70] + "â€¦";
 
-    // ----- ModalitÃ  "Modifica testo" (M3) -----
+    // ----- Modalità "Modifica testo" (M3) -----
 
     partial void OnEditModeChanged(bool value)
     {
@@ -401,7 +405,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             return;
         if (!region.IsEditable)
         {
-            ShowInfo(region.Line.NotEditableReason ?? "Questa riga non Ã¨ modificabile.");
+            ShowInfo(region.Line.NotEditableReason ?? "Questa riga non è modificabile.");
             return;
         }
         ActiveRegion = region;
@@ -443,10 +447,10 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             var plan = await Task.Run(() => PdfTextReplacer.PlanFor(_workingPath, region.Line, newText));
             if (plan.Strategy != PdfFontStrategy.ReuseEmbedded)
             {
-                // OnestÃ  prima di applicare: il risultato non userÃ  il font originale.
+                // Onestà prima di applicare: il risultato non userà il font originale.
                 var answer = MessageBox.Show(
-                    $"Il font originale non puÃ² essere riutilizzato per questo testo.\n" +
-                    $"VerrÃ  usato: {plan.Description}.\n\nApplicare comunque?",
+                    $"Il font originale non può essere riutilizzato per questo testo.\n" +
+                    $"Verrà usato: {plan.Description}.\n\nApplicare comunque?",
                     "TrameEditor", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (answer != MessageBoxResult.Yes)
                     return;
@@ -505,7 +509,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
         if (FormMode)
             _ = LoadFormFieldsAsync();
-        ResetQa(); // il testo Ã¨ cambiato: la sessione dell'assistente va ricostruita
+        ResetQa(); // il testo è cambiato: la sessione dell'assistente va ricostruita
     }
 
     // ----- Annotazioni (M4): evidenzia, nota, timbro immagine -----
@@ -520,7 +524,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
                 line.PageNumber, line.Left, line.Bottom, line.Width, line.Height));
     }
 
-    /// <summary>Click sulla pagina con Nota o Timbro attivi; coordinate in unitÃ 
+    /// <summary>Click sulla pagina con Nota o Timbro attivi; coordinate in unità
     /// display a zoom 100% (equivalenti ai punti PDF), origine in alto a sinistra.</summary>
     public async Task HandlePageClickAsync(PdfPageViewModel page, double x, double y)
     {
@@ -610,13 +614,13 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         {
             var field = FormFields.FirstOrDefault(f => f.Name == proposal.FieldName);
             if (field is null || !string.IsNullOrWhiteSpace(field.Value))
-                continue; // mai sovrascrivere quello che c'Ã¨ giÃ 
+                continue; // mai sovrascrivere quello che c'è già
             field.Value = proposal.Value;
             filled++;
         }
 
         FormStatus = filled == 0
-            ? "Nessun campo abbinabile ai dati del profilo (o giÃ  compilati)."
+            ? "Nessun campo abbinabile ai dati del profilo (o già compilati)."
             : $"Compilati {filled} campi dal profilo. Controlla i valori e premi \"Applica al PDF\".";
     }
 
@@ -641,7 +645,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         var answer = MessageBox.Show(
             "Le pagine senza layer di testo (scansioni) verranno riconosciute con OCR " +
             "(italiano + inglese, tutto offline) e riceveranno un layer di testo invisibile: " +
-            "il PDF diventerÃ  ricercabile senza cambiare aspetto.\n\nProcedere?",
+            "il PDF diventerà ricercabile senza cambiare aspetto.\n\nProcedere?",
             "TrameEditor", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (answer != MessageBoxResult.Yes)
             return;
@@ -659,13 +663,13 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
 
             if (result.PagesProcessed == 0)
             {
-                ShowInfo("Tutte le pagine hanno giÃ  un layer di testo: niente da riconoscere.");
+                ShowInfo("Tutte le pagine hanno già un layer di testo: niente da riconoscere.");
                 return;
             }
             SwapWorkingFile(newWorking);
             IsDirty = true;
             ShowInfo($"OCR completato: {result.PagesProcessed} pagine riconosciute, " +
-                $"{result.WordsFound} parole. Ora il testo Ã¨ ricercabile.");
+                $"{result.WordsFound} parole. Ora il testo è ricercabile.");
         }
         catch (Exception ex)
         {
@@ -686,6 +690,12 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     [RelayCommand]
     private async Task CompressAsync()
     {
+        // Si può comprimere al meglio, oppure fino a rientrare in un peso preciso
+        // (il caso classico: il limite di una PEC).
+        var targetMegabytes = CompressDialog.Ask();
+        if (targetMegabytes is null)
+            return;
+
         var dialog = new SaveFileDialog
         {
             Filter = PdfFilter,
@@ -701,16 +711,31 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             var pages = Pages.Select(p => new PdfPageEdit(p.OriginalIndex, p.RotationDelta)).ToList();
             var working = _workingPath;
             var target = dialog.FileName;
-            var result = await Task.Run(() =>
+            var limit = targetMegabytes.Value;
+
+            var message = await Task.Run(() =>
             {
                 PdfPageOperations.Build(working, pages, staged);
-                return PdfCompressor.Compress(staged, target);
+                if (limit <= 0)
+                {
+                    var plain = PdfCompressor.Compress(staged, target);
+                    var detail = plain.ImagesRecompressed == 0
+                        ? "nessuna immagine ricomprimibile: ridotta solo la struttura"
+                        : $"{plain.ImagesRecompressed} immagini ricompresse";
+                    return $"PDF salvato: da {plain.BeforeBytes / 1048576.0:F2} MB " +
+                        $"a {plain.AfterBytes / 1048576.0:F2} MB ({detail}).";
+                }
+
+                var bounded = PdfCompressor.CompressToTarget(staged, target,
+                    (long)(limit * 1024 * 1024));
+                var esito = bounded.TargetReached
+                    ? $"✓ Rientra nel limite di {limit:F1} MB."
+                    : $"⚠ NON rientra nel limite di {limit:F1} MB.";
+                return $"PDF salvato: da {bounded.BeforeBytes / 1048576.0:F2} MB " +
+                    $"a {bounded.AfterBytes / 1048576.0:F2} MB.\n\n{esito}\n{bounded.Sacrifices}";
             });
-            var detail = result.ImagesRecompressed == 0
-                ? "nessuna immagine ricomprimibile: ridotta solo la struttura"
-                : $"{result.ImagesRecompressed} immagini ricompresse";
-            ShowInfo($"PDF salvato: da {result.BeforeBytes / 1048576.0:F2} MB " +
-                $"a {result.AfterBytes / 1048576.0:F2} MB ({detail}).");
+
+            ShowInfo(message);
         }
         catch (Exception ex)
         {
@@ -806,7 +831,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
     private bool _askMode;
 
     /// <summary>Il pannello dell'assistente legge le pagine della copia di lavoro:
-    /// cosÃ¬ vede anche le modifiche non ancora salvate (OCR, testo, annotazioni).</summary>
+    /// così vede anche le modifiche non ancora salvate (OCR, testo, annotazioni).</summary>
     public DocumentQaViewModel Qa { get; }
 
     partial void OnAskModeChanged(bool value)
@@ -871,7 +896,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             if (result.SkippedLines.Count > 0)
             {
                 message += $"\n\nâš  ATTENZIONE: {result.SkippedLines.Count} righe non erano " +
-                    "rimovibili (testo dentro moduli grafici): i dati lÃ¬ presenti NON sono stati tolti:\n" +
+                    "rimovibili (testo dentro moduli grafici): i dati lì presenti NON sono stati tolti:\n" +
                     string.Join("\n", result.SkippedLines.Take(5).Select(l => "â€¢ " + l.Text));
             }
             MessageBox.Show(message, "TrameEditor", MessageBoxButton.OK,
@@ -967,11 +992,56 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
                 PdfPageOperations.Build(working, pages, staged);
                 PdfCryptoService.Encrypt(staged, target, password);
             });
-            ShowInfo($"PDF protetto salvato: \"{Path.GetFileName(target)}\".\nConserva la password: senza non sarÃ  apribile.");
+            ShowInfo($"PDF protetto salvato: \"{Path.GetFileName(target)}\".\nConserva la password: senza non sarà apribile.");
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Protezione non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
+    // ----- Numeri di pagina, filigrana, intestazioni (M13) -----
+
+    /// <summary>Aggiunge numerazione, filigrana o intestazioni e salva una copia.</summary>
+    [RelayCommand]
+    private async Task DecorateAsync()
+    {
+        if (DecorateDialog.Ask() is not { } choice)
+            return;
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = PdfFilter,
+            FileName = Path.GetFileNameWithoutExtension(FileName) + " - con numerazione.pdf",
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            IsSearching = true;
+            var staged = NewTempPath();
+            var pages = Pages.Select(p => new PdfPageEdit(p.OriginalIndex, p.RotationDelta)).ToList();
+            var working = _workingPath;
+            var target = dialog.FileName;
+            var result = await Task.Run(() =>
+            {
+                PdfPageOperations.Build(working, pages, staged);
+                return PdfDecorationService.Apply(staged, target,
+                    choice.Numbering, choice.Watermark, choice.HeaderFooter);
+            });
+
+            ShowInfo($"\"{Path.GetFileName(target)}\" salvato: aggiunti " +
+                $"{string.Join(", ", result.Applied)} su {result.PagesDecorated} pagine.");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Operazione non riuscita:\n{ex.Message}",
                 "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
@@ -1010,7 +1080,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
 
     /// <summary>
     /// Converte il documento in PDF/A-2 per l'archiviazione. Prima di toccare
-    /// qualunque cosa mostra il rapporto di conformitÃ  e fa scegliere fra la
+    /// qualunque cosa mostra il rapporto di conformità e fa scegliere fra la
     /// conversione fedele e quella per immagine.
     /// </summary>
     [RelayCommand]
@@ -1093,7 +1163,7 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
             }
             catch
             {
-                // file temporaneo ancora in uso: verrÃ  ripulito al prossimo avvio del SO
+                // file temporaneo ancora in uso: verrà ripulito al prossimo avvio del SO
             }
         }
     }

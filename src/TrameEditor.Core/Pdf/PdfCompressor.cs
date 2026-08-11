@@ -8,6 +8,22 @@ namespace TrameEditor.Core.Pdf;
 
 public sealed record PdfCompressResult(long BeforeBytes, long AfterBytes, int ImagesRecompressed);
 
+/// <summary>Esito della compressione con un peso da rispettare.</summary>
+public sealed record PdfTargetCompressResult(
+    long BeforeBytes,
+    long AfterBytes,
+    long TargetBytes,
+    int MaxDimension,
+    long JpegQuality,
+    bool TargetReached)
+{
+    /// <summary>Che cosa è stato sacrificato per rientrare, detto in chiaro.</summary>
+    public string Sacrifices => TargetReached
+        ? $"immagini ridotte a {MaxDimension} pixel e qualità {JpegQuality}"
+        : $"nemmeno alla qualità più bassa ({MaxDimension} pixel, qualità {JpegQuality}) " +
+          "il file rientra nel limite: quello che vedi è il meglio ottenibile";
+}
+
 /// <summary>
 /// Riduce il peso di un PDF: ricomprime le immagini JPEG (ridimensionandole se
 /// oltre <c>maxDimension</c> pixel) e riscrive il file in modalità full
@@ -52,6 +68,46 @@ public static class PdfCompressor
         }
 
         return new PdfCompressResult(beforeBytes, new FileInfo(fullTarget).Length, recompressed);
+    }
+
+    /// <summary>
+    /// Comprime finché il file non sta sotto il peso richiesto — il caso classico
+    /// è "deve entrare nella PEC". Si prova per gradi, dal meno invasivo al più
+    /// invasivo, e ci si ferma appena il limite è rispettato: non si degrada il
+    /// documento più del necessario.
+    /// <para>
+    /// Se nemmeno il grado più aggressivo basta, si consegna comunque il file più
+    /// piccolo ottenuto e <b>lo si dichiara</b>, invece di far credere che il
+    /// limite sia stato rispettato.
+    /// </para>
+    /// </summary>
+    public static PdfTargetCompressResult CompressToTarget(string sourcePath, string targetPath,
+        long targetBytes)
+    {
+        if (targetBytes <= 0)
+            throw new ArgumentOutOfRangeException(nameof(targetBytes), "Il peso richiesto deve essere positivo.");
+
+        var beforeBytes = new FileInfo(sourcePath).Length;
+
+        // Dal più conservativo al più drastico: dimensione massima e qualità JPEG.
+        (int MaxDimension, long Quality)[] steps =
+        [
+            (2200, 85), (1600, 75), (1200, 65), (900, 55), (700, 45), (500, 35),
+        ];
+
+        PdfTargetCompressResult? best = null;
+        foreach (var (maxDimension, quality) in steps)
+        {
+            var result = Compress(sourcePath, targetPath, maxDimension, quality);
+            var attempt = new PdfTargetCompressResult(beforeBytes, result.AfterBytes, targetBytes,
+                maxDimension, quality, result.AfterBytes <= targetBytes);
+
+            if (attempt.TargetReached)
+                return attempt;
+            best = attempt;
+        }
+
+        return best!;
     }
 
     private static bool TryRecompressImage(PdfStream stream, int maxDimension, long jpegQuality)

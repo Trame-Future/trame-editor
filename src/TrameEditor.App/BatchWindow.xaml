@@ -1,40 +1,66 @@
 <Window x:Class="TrameEditor.App.BatchWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Ricette — elabora più PDF in serie"
+        Title="Ricette — lavorare su molti file in una volta"
         Icon="Assets/icon-256.png"
-        Width="640" Height="560" MinWidth="520" MinHeight="440"
+        Width="680" Height="600" MinWidth="560" MinHeight="480"
         WindowStartupLocation="CenterOwner"
         Background="White">
     <DockPanel Margin="16,12">
         <StackPanel DockPanel.Dock="Top">
-            <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
-                       Margin="0,0,0,10">
-                Applica la stessa "ricetta" a molti PDF in un colpo solo.
-                I file originali non vengono mai toccati: i risultati finiscono nella cartella scelta.
-            </TextBlock>
             <DockPanel Margin="0,0,0,6">
-                <Button DockPanel.Dock="Left" Content="Scegli PDF…" Padding="10,4" Click="PickFiles_Click" />
+                <Button DockPanel.Dock="Left" x:Name="PickFilesButton" Content="Scegli file…"
+                        Padding="10,4" Click="PickFiles_Click" />
+                <Button DockPanel.Dock="Left" Content="…o una cartella" Padding="10,4"
+                        Margin="8,0,0,0" Click="PickInputFolder_Click" />
                 <TextBlock x:Name="FilesText" VerticalAlignment="Center" Margin="10,0,0,0"
-                           Text="nessun file scelto" Foreground="{StaticResource TextMutedBrush}" />
+                           Text="nessun file scelto" Foreground="{StaticResource TextMutedBrush}"
+                           TextTrimming="CharacterEllipsis" />
             </DockPanel>
             <DockPanel Margin="0,0,0,10">
-                <Button DockPanel.Dock="Left" Content="Cartella output…" Padding="10,4" Click="PickFolder_Click" />
+                <Button DockPanel.Dock="Left" Content="Cartella dei risultati…" Padding="10,4"
+                        Click="PickFolder_Click" />
                 <TextBlock x:Name="FolderText" VerticalAlignment="Center" Margin="10,0,0,0"
                            Text="nessuna cartella scelta" Foreground="{StaticResource TextMutedBrush}"
                            TextTrimming="CharacterEllipsis" />
             </DockPanel>
-            <TextBlock Text="Passi della ricetta (nell'ordine):" FontWeight="SemiBold" Margin="0,0,0,4" />
-            <CheckBox x:Name="OcrCheck" Content="OCR — riconosci il testo delle pagine scansionate" Margin="0,2" />
-            <CheckBox x:Name="RedactCheck" Content="Anonimizza — rimuovi dati personali e metadati (automatico, senza conferme)" Margin="0,2" />
-            <CheckBox x:Name="CompressCheck" Content="Comprimi — riduci il peso delle immagini" Margin="0,2" />
-            <DockPanel Margin="0,2">
-                <CheckBox x:Name="ProtectCheck" Content="Proteggi con password:" VerticalAlignment="Center" />
-                <PasswordBox x:Name="ProtectPassword" Width="180" Margin="8,0,0,0" Padding="3,2"
-                             HorizontalAlignment="Left"
-                             IsEnabled="{Binding IsChecked, ElementName=ProtectCheck}" />
-            </DockPanel>
+
+            <TabControl x:Name="ModeTabs" SelectionChanged="Mode_Changed" BorderBrush="#DDDDDD">
+                <TabItem Header="Ricetta sui PDF">
+                    <StackPanel Margin="10,8">
+                        <TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,0,0,8"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Text="Applica gli stessi passi a molti PDF. Gli originali non vengono mai toccati: i risultati finiscono nella cartella scelta." />
+                        <CheckBox x:Name="OcrCheck" Content="OCR — riconosci il testo delle pagine scansionate" Margin="0,2" />
+                        <CheckBox x:Name="RedactCheck" Content="Anonimizza — rimuovi dati personali e metadati (automatico, senza conferme)" Margin="0,2" />
+                        <CheckBox x:Name="CompressCheck" Content="Comprimi — riduci il peso delle immagini" Margin="0,2" />
+                        <DockPanel Margin="0,2">
+                            <CheckBox x:Name="ProtectCheck" Content="Proteggi con password:" VerticalAlignment="Center" />
+                            <PasswordBox x:Name="ProtectPassword" Width="180" Margin="8,0,0,0" Padding="3,2"
+                                         HorizontalAlignment="Left"
+                                         IsEnabled="{Binding IsChecked, ElementName=ProtectCheck}" />
+                        </DockPanel>
+                    </StackPanel>
+                </TabItem>
+                <TabItem Header="Estrai da file firmati (.p7m)">
+                    <StackPanel Margin="10,8">
+                        <TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,0,0,8"
+                                   Foreground="{StaticResource TextMutedBrush}">
+                            Metti in una cartella tutti i file firmati digitalmente e tirane fuori i documenti
+                            veri, apribili con qualunque lettore. Per ogni file viene detto chi ha firmato e se
+                            la firma è integra.
+                        </TextBlock>
+                        <CheckBox x:Name="RenderInvoicesCheck" IsChecked="True" Margin="0,2"
+                                  Content="Se dentro c'è una fattura elettronica, salva anche la versione leggibile in PDF" />
+                        <TextBlock TextWrapping="Wrap" FontSize="11" Margin="0,8,0,0"
+                                   Foreground="{StaticResource TextMutedBrush}">
+                            Senza questa spunta otterresti l'XML della fattura, illeggibile esattamente come prima.
+                        </TextBlock>
+                    </StackPanel>
+                </TabItem>
+            </TabControl>
         </StackPanel>
+
         <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0" LastChildFill="False">
             <TextBlock x:Name="ProgressText" VerticalAlignment="Center" FontWeight="SemiBold" />
             <Button DockPanel.Dock="Right" Content="Chiudi" Width="90" Padding="0,5" IsCancel="True" />
@@ -43,6 +69,7 @@
             <Button x:Name="RunButton" DockPanel.Dock="Right" Content="Avvia" Width="110" Padding="0,5"
                     FontWeight="Bold" Margin="0,0,8,0" Click="Run_Click" />
         </DockPanel>
+
         <ListBox x:Name="ResultsList" Margin="0,10,0,0" FontSize="12"
                  BorderBrush="#DDDDDD" HorizontalContentAlignment="Stretch">
             <ListBox.ItemTemplate>
