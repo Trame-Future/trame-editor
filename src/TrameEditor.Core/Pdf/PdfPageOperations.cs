@@ -66,7 +66,9 @@ public static class PdfPageOperations
     {
         try
         {
-            using var source = PdfReader.Open(sourcePath, PdfDocumentOpenMode.InformationOnly);
+            // Import e non InformationOnly: quest'ultimo è dichiarato obsoleto e
+            // non implementato dalla libreria.
+            using var source = PdfReader.Open(sourcePath, PdfDocumentOpenMode.Import);
 
             if (!string.IsNullOrEmpty(source.Info.Title))
                 target.Info.Title = source.Info.Title;
