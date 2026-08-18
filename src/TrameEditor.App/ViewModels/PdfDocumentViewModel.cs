@@ -895,8 +895,9 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
                 "\nRicorda di salvare con \"Salva con nome\".";
             if (result.SkippedLines.Count > 0)
             {
-                message += $"\n\nâš  ATTENZIONE: {result.SkippedLines.Count} righe non erano " +
-                    "rimovibili (testo dentro moduli grafici): i dati lì presenti NON sono stati tolti:\n" +
+                message += $"\n\n⚠ ATTENZIONE: per {result.SkippedLines.Count} righe non è stato " +
+                    "trovato il testo da togliere nel contenuto della pagina: i dati lì " +
+                    "presenti NON sono stati tolti:\n" +
                     string.Join("\n", result.SkippedLines.Take(5).Select(l => "• " + l.Text));
             }
             MessageBox.Show(message, "TrameEditor", MessageBoxButton.OK,

@@ -114,7 +114,9 @@ Seleziona le pagine dalle miniature, poi:
 
 **Onestà sui font**: se il font originale non contiene i caratteri che hai scritto, l'app usa un font di sistema equivalente o un sostituto — e **te lo dice prima** di applicare.
 
-**Limiti dichiarati**: testo ruotato o verticale, contenuti dentro moduli grafici (XObject) e scansioni senza OCR non sono modificabili; la riga riscritta perde il kerning originale.
+**Testo dentro i moduli grafici**: molti gestionali disegnano il corpo di documenti di trasporto e fatture dentro blocchi riusabili (i "form XObject"). Quel testo **si modifica** come il resto della pagina: il blocco viene copiato e solo la pagina che stai modificando usa la copia, così le altre pagine che lo condividono restano com'erano.
+
+**Limiti dichiarati**: testo ruotato o verticale e scansioni senza OCR non sono modificabili; la riga riscritta perde il kerning originale. Se una riga non appartiene al contenuto disegnato della pagina — per esempio viene da un'annotazione — l'app te lo dice invece di modificarla a metà.
 
 ## PDF — annotazioni
 

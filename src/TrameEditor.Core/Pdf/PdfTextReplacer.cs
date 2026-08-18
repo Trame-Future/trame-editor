@@ -47,8 +47,8 @@ public static class PdfTextReplacer
     /// <summary>
     /// Sostituisce più righe in un solo passaggio (usato dall'anonimizzazione):
     /// il piano font è risolto automaticamente riga per riga, i caratteri non
-    /// rappresentabili diventano '?'. Le righe i cui operatori non sono nel
-    /// flusso della pagina vengono riportate come saltate — mai silenziate.
+    /// rappresentabili diventano '?'. Le righe per cui non si trova nessun operatore
+    /// di testo vengono riportate come saltate — mai silenziate.
     /// </summary>
     public static PdfReplaceManyResult ReplaceMany(string sourcePath, string targetPath,
         IReadOnlyList<(PdfTextLine Line, string NewText)> edits)
@@ -113,8 +113,8 @@ public static class PdfTextReplacer
 
     /// <summary>
     /// Applica la sostituzione scrivendo un nuovo PDF in <paramref name="targetPath"/>.
-    /// Lancia <see cref="PdfTextEditException"/> se gli operatori della riga non sono
-    /// nel flusso principale della pagina (es. testo dentro un form XObject).
+    /// Lancia <see cref="PdfTextEditException"/> se in quella posizione non si trova
+    /// nessun operatore di testo da togliere.
     /// </summary>
     public static void Replace(string sourcePath, string targetPath,
         PdfTextLine line, string newText, PdfFontPlan plan)
@@ -134,8 +134,10 @@ public static class PdfTextReplacer
                 editor.EditPage(document, page);
                 if (editor.RemovedCount == 0)
                     throw new PdfTextEditException(
-                        "Il testo selezionato non è nel flusso principale della pagina " +
-                        "(probabilmente è dentro un modulo/XObject): modifica non applicabile.");
+                        "In quella posizione non è stato trovato nessun operatore di testo: " +
+                        "la riga non fa parte del contenuto disegnato della pagina (può venire " +
+                        "da un'annotazione o da un livello non modificabile). " +
+                        "Modifica non applicabile.");
 
                 if (newText.Length > 0)
                 {
@@ -180,17 +182,40 @@ public static class PdfTextReplacer
             _ => PdfFontFactory.CreateFont(plan.StandardFontName ?? StandardFonts.HELVETICA),
         };
 
-    private static PdfDictionary? FindFontDictionary(PdfPage page, string fontName)
+    /// <summary>Cerca il font per nome nelle risorse della pagina e, a scendere, in
+    /// quelle dei form XObject: il testo disegnato dentro un modulo usa i font del modulo,
+    /// che nelle risorse della pagina non compaiono.</summary>
+    private static PdfDictionary? FindFontDictionary(PdfPage page, string fontName) =>
+        string.IsNullOrEmpty(fontName)
+            ? null
+            : FindFontIn(page.GetResources().GetPdfObject(), fontName,
+                new HashSet<PdfDictionary>(ReferenceEqualityComparer.Instance));
+
+    private static PdfDictionary? FindFontIn(PdfDictionary? resources, string fontName,
+        HashSet<PdfDictionary> visited)
     {
-        var fonts = page.GetResources().GetResource(PdfName.Font);
-        if (fonts is null || string.IsNullOrEmpty(fontName))
+        if (resources is null || !visited.Add(resources))
             return null;
-        foreach (var key in fonts.KeySet())
+
+        var fonts = resources.GetAsDictionary(PdfName.Font);
+        if (fonts is not null)
+            foreach (var key in fonts.KeySet())
+            {
+                var candidate = fonts.GetAsDictionary(key);
+                if (candidate?.GetAsName(PdfName.BaseFont)?.GetValue() == fontName)
+                    return candidate;
+            }
+
+        var xobjects = resources.GetAsDictionary(PdfName.XObject);
+        if (xobjects is null)
+            return null;
+        foreach (var key in xobjects.KeySet())
         {
-            var candidate = fonts.GetAsDictionary(key);
-            var baseFont = candidate?.GetAsName(PdfName.BaseFont)?.GetValue();
-            if (baseFont == fontName)
-                return candidate;
+            var form = xobjects.GetAsStream(key);
+            if (form is null || !PdfName.Form.Equals(form.GetAsName(PdfName.Subtype)))
+                continue;
+            if (FindFontIn(form.GetAsDictionary(PdfName.Resources), fontName, visited) is { } found)
+                return found;
         }
         return null;
     }
@@ -301,16 +326,19 @@ public static class PdfTextReplacer
     /// <summary>
     /// Ricopia il content stream della pagina operatore per operatore, eliminando
     /// gli operatori di testo (Tj/TJ/'/") il cui punto di partenza cade dentro la
-    /// riga bersaglio. Gli operatori dentro form XObject non vengono toccati
-    /// (il loro contenuto resta referenziato dall'operatore Do).
+    /// riga bersaglio. La ricopiatura scende anche dentro i form XObject, dove molti
+    /// gestionali disegnano il corpo del documento: siccome lo stesso form può essere
+    /// richiamato da più pagine (o più volte nella stessa), non viene mai modificato
+    /// sul posto ma copiato, e solo l'occorrenza in corso punta alla copia. Un form
+    /// in cui non si toglie nulla resta il riferimento originale.
     /// </summary>
     private sealed class LineRemovalEditor : PdfCanvasProcessor
     {
         private readonly IReadOnlyList<PdfTextLine> _lines;
         private readonly Dictionary<PdfTextLine, int> _removedPerLine = [];
         private readonly CaptureListener _listener;
-        private PdfCanvas _canvas = null!;
-        private int _xobjectDepth;
+        private readonly Stack<Target> _targets = new();
+        private PdfDocument _document = null!;
 
         public int RemovedCount { get; private set; }
 
@@ -331,11 +359,33 @@ public static class PdfTextReplacer
             _listener = listener;
         }
 
+        /// <summary>Dove sta andando la ricopiatura in questo momento: la pagina, oppure
+        /// la copia del form XObject in cui si è scesi.</summary>
+        private sealed class Target(PdfCanvas canvas, PdfResources resources)
+        {
+            public PdfCanvas Canvas { get; } = canvas;
+
+            public PdfResources Resources { get; } = resources;
+
+            /// <summary>Vero se qui dentro è stato tolto del testo, oppure se un form
+            /// figlio è stato sostituito con la propria copia.</summary>
+            public bool Modified { get; set; }
+        }
+
         public void EditPage(PdfDocument document, PdfPage page)
         {
+            _document = document;
+            var resources = page.GetResources();
             var newContent = (PdfStream)new PdfStream().MakeIndirect(document);
-            _canvas = new PdfCanvas(newContent, page.GetResources(), document);
-            ProcessPageContent(page);
+            _targets.Push(new Target(new PdfCanvas(newContent, resources, document), resources));
+            try
+            {
+                ProcessPageContent(page);
+            }
+            finally
+            {
+                _targets.Clear();
+            }
             page.GetPdfObject().Put(PdfName.Contents, newContent);
             page.GetPdfObject().SetModified();
         }
@@ -346,16 +396,7 @@ public static class PdfTextReplacer
 
             if (op == "Do")
             {
-                WriteOperands(operands);
-                _xobjectDepth++;
-                try
-                {
-                    base.InvokeOperator(oper, operands);
-                }
-                finally
-                {
-                    _xobjectDepth--;
-                }
+                InvokeDo(oper, operands);
                 return;
             }
 
@@ -365,14 +406,12 @@ public static class PdfTextReplacer
 
             base.InvokeOperator(oper, operands);
 
-            if (_xobjectDepth > 0)
-                return;
-
             if (isShowText && FindMatchedLine() is { } matchedLine)
             {
                 RemovedCount++;
                 _removedPerLine[matchedLine] =
                     (_removedPerLine.TryGetValue(matchedLine, out var count) ? count : 0) + 1;
+                _targets.Peek().Modified = true;
                 // Preserva gli effetti collaterali di ' e " sul cursore di testo.
                 if (op == "'")
                 {
@@ -397,6 +436,82 @@ public static class PdfTextReplacer
             WriteOperands(operands);
         }
 
+        /// <summary>
+        /// "/Nome Do": se il riferimento è un form XObject si scende dentro, ricopiandone
+        /// il contenuto in una copia. Se lì dentro non si è tolto nulla la copia viene
+        /// buttata e resta il riferimento originale, così le parti non toccate del
+        /// documento restano quelle di prima.
+        /// </summary>
+        private void InvokeDo(PdfLiteral oper, IList<PdfObject> operands)
+        {
+            var parent = _targets.Peek();
+            var form = operands.Count > 0 && operands[0] is PdfName name
+                ? ResolveForm(parent.Resources, name)
+                : null;
+
+            if (form is null)
+            {
+                // Immagine, o riferimento che non si risolve: non c'è contenuto da riscrivere.
+                base.InvokeOperator(oper, operands);
+                WriteOperands(operands);
+                return;
+            }
+
+            var copy = CopyWithoutContent(form);
+            var resources = form.GetAsDictionary(PdfName.Resources) is { } own
+                ? new PdfResources(own)
+                : parent.Resources;
+
+            var target = new Target(new PdfCanvas(copy, resources, _document), resources);
+            _targets.Push(target);
+            try
+            {
+                base.InvokeOperator(oper, operands);
+            }
+            finally
+            {
+                _targets.Pop();
+            }
+
+            if (!target.Modified)
+            {
+                WriteOperands(operands);
+                return;
+            }
+
+            copy.MakeIndirect(_document);
+            var replacement = parent.Resources.AddForm(copy);
+            parent.Modified = true;
+            WriteObject(replacement);
+            WriteRaw(" Do\n");
+        }
+
+        /// <summary>Il form XObject richiamato dal nome, o null se è un'immagine
+        /// (o un riferimento che non si risolve).</summary>
+        private static PdfStream? ResolveForm(PdfResources resources, PdfName name)
+        {
+            var stream = resources.GetResource(PdfName.XObject)?.GetAsStream(name);
+            return stream is not null && PdfName.Form.Equals(stream.GetAsName(PdfName.Subtype))
+                ? stream
+                : null;
+        }
+
+        /// <summary>Copia il dizionario del form (BBox, Matrix, Resources, Group…) ma non
+        /// i dati: il contenuto viene riscritto da capo, quindi lunghezza e filtri di
+        /// compressione dell'originale non valgono più.</summary>
+        private static PdfStream CopyWithoutContent(PdfStream form)
+        {
+            var copy = new PdfStream();
+            foreach (var key in form.KeySet())
+            {
+                if (key.Equals(PdfName.Length) || key.Equals(PdfName.Filter) ||
+                    key.Equals(PdfName.DecodeParms))
+                    continue;
+                copy.Put(key, form.Get(key));
+            }
+            return copy;
+        }
+
         private PdfTextLine? FindMatchedLine()
         {
             foreach (var start in _listener.Pending)
@@ -412,9 +527,12 @@ public static class PdfTextReplacer
             return null;
         }
 
+        private PdfOutputStream Output() =>
+            _targets.Peek().Canvas.GetContentStream().GetOutputStream();
+
         private void WriteOperands(IList<PdfObject> operands)
         {
-            var output = _canvas.GetContentStream().GetOutputStream();
+            var output = Output();
             for (var i = 0; i < operands.Count; i++)
             {
                 output.Write(operands[i]);
@@ -422,15 +540,13 @@ public static class PdfTextReplacer
             }
         }
 
-        private void WriteObject(PdfObject obj) =>
-            _canvas.GetContentStream().GetOutputStream().Write(obj);
+        private void WriteObject(PdfObject obj) => Output().Write(obj);
 
-        private void WriteRaw(string text) =>
-            _canvas.GetContentStream().GetOutputStream().WriteString(text);
+        private void WriteRaw(string text) => Output().WriteString(text);
 
         private void WriteInlineImage(PdfStream image)
         {
-            var output = _canvas.GetContentStream().GetOutputStream();
+            var output = Output();
             output.WriteString("BI\n");
             foreach (var key in image.KeySet())
             {

@@ -10,7 +10,7 @@ Un prodotto di [Trame Future srls](https://www.tramefuture.com).
 - **Testo (.txt)** — editor con rilevamento e preservazione di encoding (UTF-8/UTF-16/ANSI) e fine riga; salvataggio atomico
 - **Markdown (.md)** — evidenziazione sintassi, anteprima live affiancata con scroll sincronizzato, toolbar di formattazione, export HTML
 - **PDF** — visualizzazione fedele (PDFium), miniature, zoom, ricerca nel testo; ruota/elimina/riordina/estrai pagine, unione di più PDF
-- **Modifica del testo interno dei PDF** — la funzione distintiva: clic su una riga, la riscrivi, il PDF viene aggiornato rimuovendo davvero gli operatori originali dal content stream (niente testo nascosto). Politica font a tre livelli (riuso incorporato → font di sistema → sostituto dichiarato) con avviso **prima** di applicare; rifiuto onesto nei casi non gestibili (testo ruotato, XObject)
+- **Modifica del testo interno dei PDF** — la funzione distintiva: clic su una riga, la riscrivi, il PDF viene aggiornato rimuovendo davvero gli operatori originali dal content stream (niente testo nascosto). Vale anche per il testo disegnato dentro i form XObject, come nei documenti dei gestionali: il modulo viene copiato, così le altre pagine che lo condividono non cambiano. Politica font a tre livelli (riuso incorporato → font di sistema → sostituto dichiarato) con avviso **prima** di applicare; rifiuto onesto nei casi non gestibili (testo ruotato, scansioni senza OCR)
 - **Annotazioni** — evidenziazione, note a comparsa, timbro immagine (firma/logo)
 - **Moduli (AcroForm)** — compilazione dei campi con opzione di appiattimento
 - **OCR offline** (Tesseract, italiano+inglese) — le scansioni ricevono un layer di testo invisibile e diventano ricercabili; nessun dato esce dal computer
