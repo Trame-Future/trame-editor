@@ -116,7 +116,13 @@ Seleziona le pagine dalle miniature, poi:
 
 **Testo dentro i moduli grafici**: molti gestionali disegnano il corpo di documenti di trasporto e fatture dentro blocchi riusabili (i "form XObject"). Quel testo **si modifica** come il resto della pagina: il blocco viene copiato e solo la pagina che stai modificando usa la copia, così le altre pagine che lo condividono restano com'erano.
 
-**Limiti dichiarati**: testo ruotato o verticale e scansioni senza OCR non sono modificabili; la riga riscritta perde il kerning originale. Se una riga non appartiene al contenuto disegnato della pagina — per esempio viene da un'annotazione — l'app te lo dice invece di modificarla a metà.
+**Righe di tabella a colonne**: nei documenti di trasporto e nelle fatture una riga come
+`MELINDA 75/80 · 64 · 10` è spesso scritta nel file come un blocco unico, anche se tu ne vedi
+tre pezzi separati. TrameEditor te li presenta come tre righe distinte e **ti lascia cambiare
+una colonna per volta**: le altre restano dove sono, senza spostarsi di un punto. Vale anche
+per la prima colonna, che è il caso in cui l'errore si nota meno.
+
+**Limiti dichiarati**: testo ruotato o verticale e scansioni senza OCR non sono modificabili; la riga riscritta perde il kerning originale. Se in quel punto non c'è testo che la pagina disegna davvero, l'app te lo dice invece di modificarlo a metà.
 
 ## PDF — annotazioni
 
@@ -398,6 +404,23 @@ cartella che scegli, e i nomi già presenti non vengono sovrascritti.
 | Ctrl+rotellina | Zoom PDF |
 | Alt+F, Alt+M, Alt+V… | Apre i menu (File, Modifica, Visualizza…) |
 | F1 | Questa guida |
+
+---
+
+## Avviso di versione nuova
+
+TrameEditor lavora **offline**: i tuoi documenti non escono mai dal computer. L'unica cosa che
+fa in rete — se glielo permetti — è guardare se è uscita una versione più recente.
+
+- La **prima volta** te lo chiede con una riga in alto: finché non rispondi, non si collega a nulla.
+- Se accetti, guarda **al più una volta al giorno**. Quando c'è una versione nuova lo dice con
+  la stessa riga, e il pulsante apre la pagina di download nel browser: **scarichi tu, quando vuoi**.
+- Non viene inviato niente su di te, sul computer o sui documenti aperti. Al sito arriva il tuo
+  indirizzo IP, come quando apri una pagina qualsiasi.
+- Puoi cambiare idea quando vuoi da **Strumenti → Impostazioni**, in un senso o nell'altro.
+
+Se la connessione manca, il controllo tace e riprova un altro giorno: non blocca né rallenta
+l'avvio del programma.
 
 ---
 

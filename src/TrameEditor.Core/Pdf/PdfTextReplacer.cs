@@ -134,10 +134,9 @@ public static class PdfTextReplacer
                 editor.EditPage(document, page);
                 if (editor.RemovedCount == 0)
                     throw new PdfTextEditException(
-                        "In quella posizione non è stato trovato nessun operatore di testo: " +
-                        "la riga non fa parte del contenuto disegnato della pagina (può venire " +
-                        "da un'annotazione o da un livello non modificabile). " +
-                        "Modifica non applicabile.");
+                        "In quella posizione non è stato trovato nessun carattere da togliere: " +
+                        "il testo che si vede lì non risulta disegnato dal contenuto della " +
+                        "pagina. Modifica non applicabile.");
 
                 if (newText.Length > 0)
                 {
@@ -324,17 +323,20 @@ public static class PdfTextReplacer
     // ----- Riscrittura del content stream -----
 
     /// <summary>
-    /// Ricopia il content stream della pagina operatore per operatore, eliminando
-    /// gli operatori di testo (Tj/TJ/'/") il cui punto di partenza cade dentro la
-    /// riga bersaglio. La ricopiatura scende anche dentro i form XObject, dove molti
-    /// gestionali disegnano il corpo del documento: siccome lo stesso form può essere
-    /// richiamato da più pagine (o più volte nella stessa), non viene mai modificato
-    /// sul posto ma copiato, e solo l'occorrenza in corso punta alla copia. Un form
-    /// in cui non si toglie nulla resta il riferimento originale.
+    /// Ricopia il content stream della pagina operatore per operatore, togliendo dagli
+    /// operatori di testo (Tj/TJ/'/") i soli caratteri che cadono dentro la riga bersaglio.
+    /// L'unità non è l'operatore ma il carattere, perché le due cose non coincidono: i
+    /// gestionali disegnano spesso un'intera riga di tabella — descrizione, calibro,
+    /// quantità — con un solo operatore, mentre l'estrazione la presenta all'utente come
+    /// colonne separate. Togliere l'operatore intero cancellerebbe le altre colonne.
+    /// La ricopiatura scende anche dentro i form XObject, dove molti gestionali disegnano
+    /// il corpo del documento: siccome lo stesso form può essere richiamato da più pagine
+    /// (o più volte nella stessa), non viene mai modificato sul posto ma copiato, e solo
+    /// l'occorrenza in corso punta alla copia. Un form in cui non si toglie nulla resta il
+    /// riferimento originale.
     /// </summary>
     private sealed class LineRemovalEditor : PdfCanvasProcessor
     {
-        private readonly IReadOnlyList<PdfTextLine> _lines;
         private readonly Dictionary<PdfTextLine, int> _removedPerLine = [];
         private readonly CaptureListener _listener;
         private readonly Stack<Target> _targets = new();
@@ -345,17 +347,16 @@ public static class PdfTextReplacer
         public int RemovedCountFor(PdfTextLine line) =>
             _removedPerLine.TryGetValue(line, out var count) ? count : 0;
 
-        public LineRemovalEditor(PdfTextLine line) : this([line], new CaptureListener())
+        public LineRemovalEditor(PdfTextLine line) : this([line])
         {
         }
 
-        public LineRemovalEditor(IReadOnlyList<PdfTextLine> lines) : this(lines, new CaptureListener())
+        public LineRemovalEditor(IReadOnlyList<PdfTextLine> lines) : this(new CaptureListener(lines))
         {
         }
 
-        private LineRemovalEditor(IReadOnlyList<PdfTextLine> lines, CaptureListener listener) : base(listener)
+        private LineRemovalEditor(CaptureListener listener) : base(listener)
         {
-            _lines = lines;
             _listener = listener;
         }
 
@@ -402,28 +403,13 @@ public static class PdfTextReplacer
 
             var isShowText = op is "Tj" or "TJ" or "'" or "\"";
             if (isShowText)
-                _listener.Pending.Clear();
+                _listener.Begin();
 
             base.InvokeOperator(oper, operands);
 
-            if (isShowText && FindMatchedLine() is { } matchedLine)
+            if (isShowText && _listener.TargetedLines.Count > 0)
             {
-                RemovedCount++;
-                _removedPerLine[matchedLine] =
-                    (_removedPerLine.TryGetValue(matchedLine, out var count) ? count : 0) + 1;
-                _targets.Peek().Modified = true;
-                // Preserva gli effetti collaterali di ' e " sul cursore di testo.
-                if (op == "'")
-                {
-                    WriteRaw("T*\n");
-                }
-                else if (op == "\"")
-                {
-                    WriteObject(operands[0]);
-                    WriteRaw(" Tw ");
-                    WriteObject(operands[1]);
-                    WriteRaw(" Tc T*\n");
-                }
+                RewriteShowText(op, operands);
                 return;
             }
 
@@ -434,6 +420,42 @@ public static class PdfTextReplacer
             }
 
             WriteOperands(operands);
+        }
+
+        /// <summary>
+        /// Riscrive un operatore di testo che tocca almeno una riga bersaglio: i caratteri
+        /// da togliere diventano lo spostamento equivalente dentro un array TJ, gli altri
+        /// restano stringhe. Quel che resta della riga non si sposta di un punto, e il
+        /// cursore di testo arriva a fine operatore dove sarebbe arrivato prima.
+        /// </summary>
+        private void RewriteShowText(string op, IList<PdfObject> operands)
+        {
+            foreach (var line in _listener.TargetedLines)
+            {
+                RemovedCount++;
+                _removedPerLine[line] =
+                    (_removedPerLine.TryGetValue(line, out var count) ? count : 0) + 1;
+            }
+            _targets.Peek().Modified = true;
+
+            // Preserva gli effetti collaterali di ' e " sul cursore di testo.
+            if (op == "'")
+            {
+                WriteRaw("T*\n");
+            }
+            else if (op == "\"")
+            {
+                WriteObject(operands[0]);
+                WriteRaw(" Tw ");
+                WriteObject(operands[1]);
+                WriteRaw(" Tc T*\n");
+            }
+
+            var rebuilt = _listener.Rebuild();
+            if (rebuilt.Size() == 0)
+                return;
+            WriteObject(rebuilt);
+            WriteRaw(" TJ\n");
         }
 
         /// <summary>
@@ -512,21 +534,6 @@ public static class PdfTextReplacer
             return copy;
         }
 
-        private PdfTextLine? FindMatchedLine()
-        {
-            foreach (var start in _listener.Pending)
-            {
-                foreach (var line in _lines)
-                {
-                    if (Math.Abs(start.Y - line.BaselineY) <= 2.5 &&
-                        start.X >= line.Left - 2 &&
-                        start.X <= line.Left + line.Width + 2)
-                        return line;
-                }
-            }
-            return null;
-        }
-
         private PdfOutputStream Output() =>
             _targets.Peek().Canvas.GetContentStream().GetOutputStream();
 
@@ -564,19 +571,165 @@ public static class PdfTextReplacer
         private static readonly byte[] NewLine = [(byte)'\n'];
     }
 
-    private sealed class CaptureListener : IEventListener
+    /// <summary>
+    /// Raccoglie i pezzi che compongono l'operatore di testo in corso e sa ricostruirlo
+    /// senza i caratteri che cadono nelle righe bersaglio. Un pezzo che non sfiora nessuna
+    /// riga resta intero — scomporlo in caratteri costa, e sulle pagine fitte si pagherebbe
+    /// a ogni operatore; solo i pezzi che la sfiorano si guardano carattere per carattere.
+    /// </summary>
+    private sealed class CaptureListener(IReadOnlyList<PdfTextLine> lines) : IEventListener
     {
-        public List<(double X, double Y)> Pending { get; } = [];
+        /// <summary>Quanto un carattere può sporgere dai bordi della riga estratta e
+        /// contare ancora come suo: le colonne di una tabella sono separate da distacchi
+        /// molto più larghi, quindi non c'è rischio di prendere quella accanto.</summary>
+        private const double EdgeTolerance = 1.5;
+
+        private const double BaselineTolerance = 2.5;
+
+        private readonly List<Piece> _pieces = [];
+        private readonly HashSet<PdfTextLine> _targeted = [];
+        private double _fontSize;
+        private double _horizontalScaling = 100;
+
+        /// <summary>Le righe bersaglio toccate dall'operatore in corso.</summary>
+        public IReadOnlyCollection<PdfTextLine> TargetedLines => _targeted;
+
+        public void Begin()
+        {
+            _pieces.Clear();
+            _targeted.Clear();
+        }
 
         public void EventOccurred(IEventData data, EventType type)
         {
-            if (type == EventType.RENDER_TEXT && data is TextRenderInfo info)
+            if (type != EventType.RENDER_TEXT || data is not TextRenderInfo info)
+                return;
+
+            _fontSize = info.GetFontSize();
+            _horizontalScaling = info.GetHorizontalScaling();
+
+            var baseline = info.GetBaseline();
+            var x0 = baseline.GetStartPoint().Get(0);
+            var x1 = baseline.GetEndPoint().Get(0);
+            var y = baseline.GetStartPoint().Get(1);
+
+            if (!MayTouch(y, Math.Min(x0, x1), Math.Max(x0, x1)))
             {
-                var start = info.GetBaseline().GetStartPoint();
-                Pending.Add((start.Get(0), start.Get(1)));
+                _pieces.Add(new Piece(info.GetPdfString().GetValueBytes(),
+                    x0, x1, info.GetUnscaledWidth(), Keep: true));
+                return;
+            }
+
+            foreach (var glyph in info.GetCharacterRenderInfos())
+            {
+                var line = glyph.GetBaseline();
+                var gx0 = line.GetStartPoint().Get(0);
+                var gx1 = line.GetEndPoint().Get(0);
+                var unscaled = glyph.GetUnscaledBaseline();
+                var matched = Match(line.GetStartPoint().Get(1), (gx0 + gx1) / 2);
+                if (matched is not null)
+                    _targeted.Add(matched);
+                _pieces.Add(new Piece(glyph.GetPdfString().GetValueBytes(), gx0, gx1,
+                    unscaled.GetEndPoint().Get(0) - unscaled.GetStartPoint().Get(0),
+                    Keep: matched is null));
             }
         }
 
+        /// <summary>Vero se il pezzo si sovrappone anche solo in parte a una riga bersaglio:
+        /// filtro grossolano, deciso sull'ingombro, prima di scendere ai caratteri.</summary>
+        private bool MayTouch(double y, double left, double right)
+        {
+            foreach (var line in lines)
+                if (Math.Abs(y - line.BaselineY) <= BaselineTolerance &&
+                    right >= line.Left - EdgeTolerance &&
+                    left <= line.Left + line.Width + EdgeTolerance)
+                    return true;
+            return false;
+        }
+
+        /// <summary>La riga bersaglio in cui cade il centro del carattere, o null.</summary>
+        private PdfTextLine? Match(double y, double center)
+        {
+            foreach (var line in lines)
+                if (Math.Abs(y - line.BaselineY) <= BaselineTolerance &&
+                    center >= line.Left - EdgeTolerance &&
+                    center <= line.Left + line.Width + EdgeTolerance)
+                    return line;
+            return null;
+        }
+
+        /// <summary>
+        /// Ricostruisce l'operatore come array TJ: i pezzi da tenere restano stringhe (con i
+        /// byte originali, non il testo decodificato: con i font a sottoinsieme sono l'unica
+        /// cosa che il font sa ancora disegnare), quelli da togliere diventano lo spostamento
+        /// equivalente. Array vuoto se lo spostamento non è calcolabile: in quel caso si
+        /// toglie e basta, come faceva la versione che ragionava per operatori interi.
+        /// </summary>
+        public PdfArray Rebuild()
+        {
+            var array = new PdfArray();
+            var scale = _fontSize * _horizontalScaling / 100.0;
+            var userPerTextUnit = UserPerTextUnit();
+            if (scale <= 0 || userPerTextUnit <= 0)
+                return array;
+
+            var buffer = new List<byte>();
+
+            void Flush()
+            {
+                if (buffer.Count == 0)
+                    return;
+                array.Add(new PdfString(buffer.ToArray()));
+                buffer.Clear();
+            }
+
+            void Skip(double userAdvance)
+            {
+                if (Math.Abs(userAdvance) < 1e-6)
+                    return;
+                Flush();
+                // Un numero dentro TJ sposta il cursore di -n/1000 · corpo · scala orizzontale.
+                var amount = -1000.0 * (userAdvance / userPerTextUnit) / scale;
+                if (array.Size() > 0 && array.Get(array.Size() - 1) is PdfNumber previous)
+                    array.Set(array.Size() - 1, new PdfNumber(previous.GetValue() + amount));
+                else
+                    array.Add(new PdfNumber(amount));
+            }
+
+            double? cursor = null;
+            foreach (var piece in _pieces)
+            {
+                if (cursor is { } previous)
+                    Skip(piece.X0 - previous); // crenatura originale fra un pezzo e l'altro
+                cursor = piece.X1;
+
+                if (piece.Keep)
+                    buffer.AddRange(piece.Bytes);
+                else
+                    Skip(piece.X1 - piece.X0);
+            }
+            Flush();
+            return array;
+        }
+
+        /// <summary>Quanti punti sulla pagina vale un'unità di text space in questo
+        /// operatore: serve a tradurre in spostamenti TJ le distanze misurate sulla pagina.
+        /// Si ricava da un pezzo di larghezza nota, così tiene conto sia della matrice di
+        /// testo sia di quella della pagina o del modulo in cui si sta scrivendo.</summary>
+        private double UserPerTextUnit()
+        {
+            foreach (var piece in _pieces)
+                if (piece.Unscaled > 0.001)
+                    return (piece.X1 - piece.X0) / piece.Unscaled;
+            return 0;
+        }
+
         public ICollection<EventType>? GetSupportedEvents() => null;
+
+        /// <summary>Un tratto dell'operatore: o un carattere singolo, o un blocco intero
+        /// che non tocca nessuna riga bersaglio. <paramref name="Unscaled"/> è la sua
+        /// larghezza in text space, <paramref name="X0"/>/<paramref name="X1"/> gli estremi
+        /// sulla pagina.</summary>
+        private sealed record Piece(byte[] Bytes, double X0, double X1, double Unscaled, bool Keep);
     }
 }

@@ -38,6 +38,26 @@
 
         <fluent:Ribbon x:Name="RibbonBar" DockPanel.Dock="Top" />
 
+        <!-- Avviso aggiornamenti: compare solo quando c'è qualcosa da dire, non è modale
+             e non ruba il fuoco. Serve sia a chiedere il consenso la prima volta sia ad
+             annunciare la versione nuova. -->
+        <Border x:Name="UpdateBar" DockPanel.Dock="Top" Visibility="Collapsed"
+                Background="#FFF4CE" BorderBrush="#E0C877" BorderThickness="0,0,0,1" Padding="12,8">
+            <DockPanel>
+                <Button x:Name="UpdateDismissButton" DockPanel.Dock="Right" Content="✕"
+                        Margin="8,0,0,0" Padding="6,0" ToolTip="Chiudi l'avviso"
+                        Background="Transparent" BorderThickness="0" Cursor="Hand"
+                        Click="UpdateDismiss_Click" />
+                <Button x:Name="UpdateNoButton" DockPanel.Dock="Right" Content="No, grazie"
+                        Margin="8,0,0,0" Padding="10,3" Cursor="Hand"
+                        Click="UpdateNo_Click" />
+                <Button x:Name="UpdateYesButton" DockPanel.Dock="Right" Content="Attiva"
+                        Margin="8,0,0,0" Padding="10,3" Cursor="Hand"
+                        Click="UpdateYes_Click" />
+                <TextBlock x:Name="UpdateText" VerticalAlignment="Center" TextWrapping="Wrap" />
+            </DockPanel>
+        </Border>
+
         <StatusBar DockPanel.Dock="Bottom" Style="{StaticResource OfficeStatusBar}">
             <StatusBarItem>
                 <TextBlock Text="{Binding SelectedDocument.FormatDisplay}" Foreground="White" />

@@ -17,6 +17,7 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         var settings = AppSettings.Load();
         EndpointBox.Text = settings.OllamaEndpoint;
+        UpdateCheckBox.IsChecked = settings.UpdateCheckEnabled == true;
         VeraPdfBox.Text = settings.VeraPdfPath;
         Loaded += (_, _) =>
         {
@@ -221,11 +222,13 @@ public partial class SettingsWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        new AppSettings
-        {
-            OllamaEndpoint = EndpointBox.Text.Trim(),
-            VeraPdfPath = VeraPdfBox.Text.Trim(),
-        }.Save();
+        // Si riparte da quelle salvate e si cambia il poco che questa finestra governa:
+        // costruirne di nuove azzererebbe tutto ciò che non compare qui.
+        var settings = AppSettings.Load();
+        settings.OllamaEndpoint = EndpointBox.Text.Trim();
+        settings.VeraPdfPath = VeraPdfBox.Text.Trim();
+        settings.UpdateCheckEnabled = UpdateCheckBox.IsChecked == true;
+        settings.Save();
         DialogResult = true;
         Close();
     }

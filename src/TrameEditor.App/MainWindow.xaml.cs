@@ -6,8 +6,10 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using TrameEditor.App.Services;
 using TrameEditor.App.ViewModels;
+using TrameEditor.Core.Session;
 using TrameEditor.Core.Shell;
 using TrameEditor.Core.Ui;
+using TrameEditor.Core.Update;
 
 namespace TrameEditor.App;
 
@@ -25,6 +27,7 @@ public partial class MainWindow : Fluent.RibbonWindow
         _ui.BuildMenuBar(ClassicMenu, DecorateMenu);
         _ui.BuildRibbon(RibbonBar, _ribbonLayout);
         Loaded += async (_, _) => await StartAsync();
+        Loaded += (_, _) => StartUpdateCheck();
     }
 
     /// <summary>
@@ -60,6 +63,121 @@ public partial class MainWindow : Fluent.RibbonWindow
             _viewModel.OpenPath(path);
 
         await RunOnOpenedDocumentAsync(request.Verb);
+    }
+
+    // ----- Avviso di versione nuova -----
+
+    /// <summary>Cosa sta chiedendo la barra in alto in questo momento.</summary>
+    private enum UpdatePrompt { None, Consent, Available }
+
+    private UpdatePrompt _updatePrompt = UpdatePrompt.None;
+    private string _latestVersion = string.Empty;
+
+    private static Version CurrentVersion =>
+        typeof(MainWindow).Assembly.GetName().Version ?? new Version(0, 0, 0);
+
+    /// <summary>Rilegge le impostazioni prima di scrivere, per non sovrascrivere quello che
+    /// l'utente ha cambiato altrove nel frattempo.</summary>
+    private static void ChangeSettings(Action<AppSettings> change)
+    {
+        var settings = AppSettings.Load();
+        change(settings);
+        settings.Save();
+    }
+
+    /// <summary>All'avvio: la prima volta si chiede il permesso, poi si guarda al più una
+    /// volta al giorno. Non blocca mai la partenza e, se la rete non c'è, tace.</summary>
+    private void StartUpdateCheck()
+    {
+        var settings = AppSettings.Load();
+
+        if (settings.UpdateCheckEnabled is null)
+        {
+            ShowUpdateBar(UpdatePrompt.Consent,
+                "Vuoi che TrameEditor ti avvisi quando esce una versione nuova? Guarderebbe una "
+                + "volta al giorno su tramefuture.com. Non viene inviato niente su di te o sui "
+                + "tuoi documenti: al sito arriva il tuo indirizzo IP, come quando apri una pagina.");
+            return;
+        }
+
+        if (settings.ShouldCheckForUpdates(DateTime.UtcNow))
+            _ = CheckForUpdateAsync();
+    }
+
+    private async Task CheckForUpdateAsync()
+    {
+        var result = await new UpdateChecker().CheckAsync(CurrentVersion);
+        ChangeSettings(s => s.LastUpdateCheckUtc = DateTime.UtcNow);
+
+        if (!result.UpdateAvailable || result.Latest is null)
+            return;
+
+        _latestVersion = $"{result.Latest.Major}.{result.Latest.Minor}.{result.Latest.Build}";
+        if (AppSettings.Load().LastAnnouncedVersion == _latestVersion)
+            return; // già annunciata e presa in carico: non si insiste
+        var current = $"{CurrentVersion.Major}.{CurrentVersion.Minor}.{CurrentVersion.Build}";
+        ShowUpdateBar(UpdatePrompt.Available,
+            $"È disponibile TrameEditor {_latestVersion} — qui c'è la {current}. "
+            + "L'aggiornamento si scarica dal sito e si installa sopra a questa versione.");
+    }
+
+    private void ShowUpdateBar(UpdatePrompt prompt, string text)
+    {
+        _updatePrompt = prompt;
+        UpdateText.Text = text;
+        UpdateYesButton.Content = prompt == UpdatePrompt.Consent ? "Sì, avvisami" : "Vai al download";
+        UpdateNoButton.Visibility = prompt == UpdatePrompt.Consent ? Visibility.Visible : Visibility.Collapsed;
+        UpdateDismissButton.Visibility = prompt == UpdatePrompt.Consent ? Visibility.Collapsed : Visibility.Visible;
+        UpdateBar.Visibility = Visibility.Visible;
+    }
+
+    private void HideUpdateBar()
+    {
+        UpdateBar.Visibility = Visibility.Collapsed;
+        _updatePrompt = UpdatePrompt.None;
+    }
+
+    private void UpdateYes_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updatePrompt == UpdatePrompt.Consent)
+        {
+            ChangeSettings(s => s.UpdateCheckEnabled = true);
+            HideUpdateBar();
+            _ = CheckForUpdateAsync(); // il primo controllo subito, visto che ha appena detto sì
+            return;
+        }
+
+        OpenDownloadPage();
+    }
+
+    private void UpdateNo_Click(object sender, RoutedEventArgs e)
+    {
+        ChangeSettings(s => s.UpdateCheckEnabled = false);
+        HideUpdateBar();
+    }
+
+    /// <summary>Chiudere l'avviso vale come "l'ho letto": quella versione non si riannuncia.
+    /// Se invece lo si ignora, ricompare al prossimo controllo — così un aggiornamento non
+    /// sparisce per una chiusura distratta.</summary>
+    private void UpdateDismiss_Click(object sender, RoutedEventArgs e)
+    {
+        var announced = _latestVersion;
+        if (!string.IsNullOrEmpty(announced))
+            ChangeSettings(s => s.LastAnnouncedVersion = announced);
+        HideUpdateBar();
+    }
+
+    private void OpenDownloadPage()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(UpdateChecker.DownloadPageUrl) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Non è stato possibile aprire il browser: {ex.Message}\n\n"
+                + UpdateChecker.DownloadPageUrl, "TrameEditor");
+        }
     }
 
     /// <summary>L'azione da eseguire sul documento appena aperto. Se il

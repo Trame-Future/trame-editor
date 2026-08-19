@@ -19,6 +19,24 @@ public sealed class AppSettings
     /// Vuoto finché veraPDF non viene installato: è un componente opzionale.</summary>
     public string VeraPdfPath { get; set; } = string.Empty;
 
+    /// <summary>Se avvisare quando esce una versione nuova. <c>null</c> finché non lo si è
+    /// chiesto all'utente: il controllo è l'unica cosa che TrameEditor manda in rete, quindi
+    /// non parte da sé prima di un sì esplicito (regola 2 del progetto).</summary>
+    public bool? UpdateCheckEnabled { get; set; }
+
+    /// <summary>Quando è stato fatto l'ultimo controllo: si guarda una volta al giorno,
+    /// non a ogni avvio.</summary>
+    public DateTime? LastUpdateCheckUtc { get; set; }
+
+    /// <summary>L'ultima versione già annunciata, per non ripetere lo stesso avviso a ogni
+    /// avvio finché l'utente non aggiorna.</summary>
+    public string LastAnnouncedVersion { get; set; } = string.Empty;
+
+    /// <summary>Vero se è ora di guardare: consenso dato e ultimo controllo di ieri o prima.</summary>
+    public bool ShouldCheckForUpdates(DateTime utcNow) =>
+        UpdateCheckEnabled == true &&
+        (LastUpdateCheckUtc is null || utcNow - LastUpdateCheckUtc.Value >= TimeSpan.FromDays(1));
+
     public static string DefaultPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "TrameEditor", "impostazioni.json");

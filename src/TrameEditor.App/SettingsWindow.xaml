@@ -31,6 +31,20 @@
                            Margin="0,4,0,0" Foreground="{StaticResource TextMutedBrush}" />
                 <Separator Margin="0,16,0,0" />
 
+                <!-- Aggiornamenti -->
+                <TextBlock Text="Avviso di versione nuova" FontWeight="Bold" FontSize="14"
+                           Foreground="{StaticResource AccentBrush}" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19" Margin="0,2,0,6">
+                    È <Bold>l'unica cosa</Bold> che TrameEditor fa in rete. Guarda al più una volta al
+                    giorno se sul sito c'è una versione più recente e, se c'è, lo dice con una riga in
+                    alto: il download resta una tua scelta e passa dal browser.<LineBreak />
+                    Non viene inviato niente su di te, sul computer o sui documenti aperti: al sito
+                    arriva il tuo indirizzo IP, come quando apri una pagina qualsiasi.
+                </TextBlock>
+                <CheckBox x:Name="UpdateCheckBox" FontSize="12" FontWeight="SemiBold"
+                          Content="Avvisami quando esce una versione nuova" />
+                <Separator Margin="0,16,0,0" />
+
                 <!-- Connessione -->
                 <TextBlock Text="Connessione a Ollama" FontWeight="Bold" FontSize="14"
                            Foreground="{StaticResource AccentBrush}" />
