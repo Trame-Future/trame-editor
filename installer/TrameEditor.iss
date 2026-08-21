@@ -4,7 +4,7 @@
 ;   dotnet publish src/TrameEditor.App -c Release -r win-x64 --self-contained true -o dist/publish
 
 #define MyAppName "TrameEditor"
-#define MyAppVersion "2.13.0"
+#define MyAppVersion "2.14.0"
 #define MyAppPublisher "Trame Future srls"
 #define MyAppURL "https://www.tramefuture.com"
 #define MyAppExeName "TrameEditor.exe"
@@ -31,6 +31,11 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+; Avvisa Windows che l'ambiente e' cambiato (messaggio WM_SETTINGCHANGE). Senza questa riga
+; la voce aggiunta al PATH finisce nel registro ma nessuno se ne accorge: Explorer continua
+; a usare l'ambiente vecchio e lo passa a ogni terminale che apre, anche a quelli aperti
+; dopo l'installazione. Sembra che il PATH non sia stato scritto, e invece c'e'.
+ChangesEnvironment=yes
 
 [Languages]
 Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
@@ -42,6 +47,9 @@ Name: "assoc_txt"; Description: "Associa i file .txt a TrameEditor"; GroupDescri
 Name: "assoc_md"; Description: "Associa i file .md (Markdown) a TrameEditor"; GroupDescription: "Associazioni file:"; Flags: unchecked
 Name: "assoc_pdf"; Description: "Associa i file .pdf a TrameEditor"; GroupDescription: "Associazioni file:"; Flags: unchecked
 Name: "shellmenu"; Description: "Aggiungi TrameEditor al menu del tasto destro (su Windows 11: ""Mostra altre opzioni"")"; GroupDescription: "Integrazione con Windows:"
+; trameeditor-cli.exe viene installato sempre (sta nella cartella dei programmi); il PATH
+; si tocca solo se lo si chiede, perché e' l'ambiente di tutto il sistema.
+Name: "addpath"; Description: "Aggiungi la cartella al PATH, per usare ""trameeditor-cli"" da terminale e dagli agenti AI"; GroupDescription: "Riga di comando:"; Flags: unchecked
 
 [Files]
 Source: "..\dist\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -104,5 +112,26 @@ Root: HKCU; Subkey: "Software\Classes\SystemFileAssociations\.md\shell\TrameEdit
 Root: HKCU; Subkey: "Software\Classes\Directory\shell\TrameEditor.cerca"; Flags: dontcreatekey uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\Directory\shell\TrameEditor.estrai"; Flags: dontcreatekey uninsdeletekey
 
+; PATH dell'utente, non della macchina: l'installazione puo' avvenire senza diritti di
+; amministratore, e comunque non si tocca l'ambiente di tutti per una scelta di uno.
+Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Tasks: addpath; Check: PathNonContieneCartella
+
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+{ Aggiungere due volte la stessa cartella al PATH lo allunga a ogni reinstallazione:
+  si guarda se c'e' gia', confrontando con i punto e virgola intorno per non farsi
+  ingannare da una cartella il cui nome contiene l'altra. }
+function PathNonContieneCartella: Boolean;
+var
+  PathAttuale: string;
+begin
+  if not RegQueryStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', PathAttuale) then
+  begin
+    Result := True;
+    exit;
+  end;
+  Result := Pos(';' + Uppercase(ExpandConstant('{app}')) + ';',
+                ';' + Uppercase(PathAttuale) + ';') = 0;
+end;

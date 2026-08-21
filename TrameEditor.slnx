@@ -1,9 +1,11 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/TrameEditor.App/TrameEditor.App.csproj" />
+    <Project Path="src/TrameEditor.Cli/TrameEditor.Cli.csproj" />
     <Project Path="src/TrameEditor.Core/TrameEditor.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/TrameEditor.Cli.Tests/TrameEditor.Cli.Tests.csproj" />
     <Project Path="tests/TrameEditor.Core.Tests/TrameEditor.Core.Tests.csproj" />
   </Folder>
 </Solution>

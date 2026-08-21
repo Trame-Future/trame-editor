@@ -407,6 +407,95 @@ cartella che scegli, e i nomi già presenti non vengono sovrascritti.
 
 ---
 
+## Da riga di comando e dagli assistenti AI 🤖
+
+Accanto al programma viene installato **`trameeditor-cli.exe`**: lo stesso TrameEditor senza
+finestra, che risponde in JSON. Serve per gli script e perché **un assistente AI possa usarlo
+come strumento** — non facendogli premere i pulsanti, ma chiamandolo.
+
+Si trova nella cartella di installazione (di solito `C:\Program Files\TrameEditor\`). Se
+durante l'installazione hai scelto *"Aggiungi la cartella al PATH"*, basta scrivere
+`trameeditor-cli` in un terminale qualsiasi.
+
+### Provalo a mano
+
+```
+trameeditor-cli righe documento.pdf
+trameeditor-cli sostituisci documento.pdf corretto.pdf --testo "64" --nuovo "99"
+trameeditor-cli anonimizza documento.pdf pulito.pdf --tipi cf,iban
+trameeditor-cli firme documento.p7m
+trameeditor-cli fattura fattura.xml
+```
+
+Il primo comando elenca le righe con un **indice**: è il numero da passare a `sostituisci`.
+Nessun comando sovrascrive un file esistente: se serve, si aggiunge `--sovrascrivi`.
+
+### Collegarlo a un assistente
+
+`trameeditor-cli mcp` avvia un **server MCP**, il modo con cui gli assistenti prendono
+strumenti esterni. Non apre porte e non manda niente su internet: è un programma che
+l'assistente avvia sul tuo computer.
+
+> **Da sapere prima di collegarlo.** Il server resta qui, ma l'assistente no: quello che gli
+> fai leggere — il testo di una riga, i dati di una fattura — arriva a lui e al servizio che
+> lo fa funzionare. Il file non viene caricato da nessuna parte, ma **il contenuto che
+> l'assistente legge esce di casa**. Per i documenti riservati usa `trameeditor-cli` a mano.
+
+**Claude Desktop** — nel file `%APPDATA%\Claude\claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "trameeditor": {
+      "command": "C:\\Program Files\\TrameEditor\\trameeditor-cli.exe",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+**Claude Code** — da terminale, una riga sola:
+
+```
+claude mcp add trameeditor -- "C:\Program Files\TrameEditor\trameeditor-cli.exe" mcp
+```
+
+**DeepSeek** — DeepSeek è un modello, non un programma con gli strumenti: serve un'app che
+sappia usare l'uno e gli altri. Una che va bene è **Cherry Studio** (gratuita): in
+*Impostazioni → Fornitori* scegli DeepSeek e metti la tua chiave, poi in *Impostazioni → MCP*
+aggiungi un server di tipo **stdio** con comando `C:\Program Files\TrameEditor\trameeditor-cli.exe`
+e argomento `mcp`. Lo stesso vale per gli altri programmi che supportano MCP.
+
+**Codex di OpenAI** (app, CLI o estensione per l'editor) — sì, e con lo stesso meccanismo di
+Claude. Nel file `%USERPROFILE%\.codex\config.toml` aggiungi in fondo:
+
+```toml
+[mcp_servers.trameeditor]
+command = 'C:\Program Files\TrameEditor\trameeditor-cli.exe'
+args = ["mcp"]
+```
+
+Le tre applicazioni Codex leggono lo stesso file, quindi si configura una volta sola.
+
+**ChatGPT** (il sito e l'app di chat) — **non si collega**, e non è un limite di TrameEditor:
+i suoi connettori non partono dal tuo computer ma **dai server di OpenAI**, che vanno a
+bussare a un indirizzo pubblico HTTPS. Per loro `127.0.0.1` è la *loro* macchina, non la tua:
+far ascoltare TrameEditor su un indirizzo locale non servirebbe a niente. L'unico modo
+sarebbe pubblicare il server su internet — cioè rendere i tuoi documenti raggiungibili da
+fuori, cosa che è meglio non fare. Con la chat conviene usare `trameeditor-cli` a mano e
+incollarle il risultato; se vuoi che sia un programma di OpenAI a lavorare da solo sui file,
+quello è Codex.
+
+### Cosa aspettarsi dalle risposte
+
+Ogni comando risponde in JSON e **dice anche quello che non ha potuto fare**: `sostituisci`
+dichiara quale carattere ha usato, `anonimizza` elenca le righe che non è riuscito a
+ripulire, `firme` ricorda ogni volta che verifica l'integrità e non la validità legale.
+Sono le stesse cose che l'applicazione ti direbbe in una finestra: un assistente le finestre
+non le vede, quindi gliele diciamo nei dati.
+
+---
+
 ## Avviso di versione nuova
 
 TrameEditor lavora **offline**: i tuoi documenti non escono mai dal computer. L'unica cosa che
