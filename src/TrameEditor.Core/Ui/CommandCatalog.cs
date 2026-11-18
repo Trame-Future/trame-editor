@@ -227,6 +227,12 @@ public static class CommandCatalog
         },
         new()
         {
+            Id = "export-tables", Label = "Esporta tabelle", MenuLabel = "Esporta le tabelle\u2026", Menu = MenuConvert,
+            Description = "Riconosce le righe e le colonne del PDF e le salva in Excel o CSV",
+            Glyph = "\uE80A",
+        },
+        new()
+        {
             Id = "ocr", SeparatorBefore = true, Label = "Riconosci testo", MenuLabel = "Riconosci il testo (OCR)", Menu = MenuConvert,
             Description = "Riconosce il testo delle pagine scansionate (OCR offline ita+eng)",
             Glyph = "OCR", GlyphFont = GlyphFont.Text,

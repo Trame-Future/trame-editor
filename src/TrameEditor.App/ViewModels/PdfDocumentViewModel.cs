@@ -10,6 +10,7 @@ using TrameEditor.App.Services;
 using TrameEditor.Core.Ai;
 using TrameEditor.Core.Documents;
 using TrameEditor.Core.Ocr;
+using TrameEditor.Core.Tables;
 using TrameEditor.Core.Pdf;
 using TrameEditor.Core.Signatures;
 
@@ -485,8 +486,15 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         return path;
     }
 
-    /// <summary>Sostituisce il file di lavoro dopo una modifica al testo:
-    /// ricrea renderer e pagine preservando ordine, rotazioni ed eliminazioni.</summary>
+    /// <summary>
+    /// Sostituisce il file di lavoro dopo una modifica (testo, annotazioni, OCR…), preservando
+    /// ordine, rotazioni, eliminazioni e selezione delle pagine.
+    /// <para>
+    /// Le pagine restano gli stessi oggetti e vengono solo agganciate al file nuovo: la vista
+    /// non si svuota e resta dove l'utente la stava guardando. Ricrearle da capo riportava
+    /// lo scorrimento all'inizio del documento a ogni riga modificata.
+    /// </para>
+    /// </summary>
     private void SwapWorkingFile(string newWorkingPath)
     {
         _renderer.Dispose();
@@ -495,10 +503,24 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         _workingPath = newWorkingPath;
         _renderer = new PdfRenderService(newWorkingPath);
 
-        var specs = Pages.Select(p => (p.OriginalIndex, p.RotationDelta)).ToList();
-        Pages.Clear();
-        foreach (var (index, rotation) in specs)
-            Pages.Add(new PdfPageViewModel(_renderer, index) { RotationDelta = rotation });
+        if (Pages.All(p => p.OriginalIndex < _renderer.PageCount))
+        {
+            foreach (var page in Pages)
+                page.Rebind(_renderer);
+        }
+        else
+        {
+            // Il file nuovo ha meno pagine di quelle che la vista mostra: non succede con le
+            // modifiche di oggi, ma se succedesse le pagine vanno ricreate, a costo di perdere
+            // la posizione, piuttosto che puntare a pagine che non esistono.
+            var specs = Pages
+                .Where(p => p.OriginalIndex < _renderer.PageCount)
+                .Select(p => (p.OriginalIndex, p.RotationDelta))
+                .ToList();
+            Pages.Clear();
+            foreach (var (index, rotation) in specs)
+                Pages.Add(new PdfPageViewModel(_renderer, index) { RotationDelta = rotation });
+        }
         SearchMatches.Clear();
         SelectedMatch = null;
 
@@ -821,6 +843,81 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         catch (Exception ex)
         {
             MessageBox.Show($"Export testo non riuscito:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Riconosce le tabelle del PDF e le salva in CSV o in Excel. Prima di salvare dice
+    /// quante righe ha trovato e quante ne ha lasciate fuori: chi esporta deve poter capire
+    /// subito se il riconoscimento ha preso tutto o solo un pezzo.
+    /// </summary>
+    [RelayCommand]
+    private async Task ExportTablesAsync()
+    {
+        if (!EnsureInspector())
+            return;
+
+        var source = _workingPath ?? FilePath;
+        if (string.IsNullOrEmpty(source))
+            return;
+
+        var pages = Pages.Select(p => p.OriginalIndex + 1).ToList();
+        List<PdfTable> tables;
+        try
+        {
+            tables = await Task.Run(() => pages
+                .Select(page => PdfTableReader.Read(source, page))
+                .Where(t => !t.IsEmpty)
+                .ToList());
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Lettura delle tabelle non riuscita:\n{ex.Message}",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        if (tables.Count == 0)
+        {
+            MessageBox.Show(
+                "In questo documento non è stata riconosciuta nessuna tabella.\n\n" +
+                "Una tabella si riconosce da almeno due righe incolonnate allo stesso modo: " +
+                "un elenco scritto di seguito, o una riga sola, non bastano.",
+                "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var rows = tables.Sum(t => t.RowCount);
+        var left = tables.Sum(t => t.IgnoredLines);
+        var summary = tables.Count == 1
+            ? $"Trovata una tabella di {rows} righe e {tables[0].ColumnCount} colonne."
+            : $"Trovate {tables.Count} tabelle, {rows} righe in tutto.";
+
+        var confirm = MessageBox.Show(
+            $"{summary}\n\n" +
+            $"Righe della pagina rimaste fuori dalla tabella: {left} " +
+            "(titoli, testo scorrevole, piè di pagina).\n\nVuoi salvarle?",
+            "Tabelle riconosciute", MessageBoxButton.OKCancel, MessageBoxImage.Information);
+        if (confirm != MessageBoxResult.OK)
+            return;
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = "Cartella di lavoro Excel (*.xlsx)|*.xlsx|Testo separato da punto e virgola (*.csv)|*.csv",
+            FileName = Path.ChangeExtension(FileName, ".xlsx"),
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            await Task.Run(() => TableExporter.Export(tables, dialog.FileName));
+            ShowInfo($"Tabelle salvate in \"{Path.GetFileName(dialog.FileName)}\".");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Salvataggio non riuscito:\n{ex.Message}",
                 "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

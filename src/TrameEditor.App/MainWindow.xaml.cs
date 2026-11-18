@@ -256,6 +256,7 @@ public partial class MainWindow : Fluent.RibbonWindow
         _ui.BindPath("export-html", nameof(MainViewModel.ExportHtmlCommand));
         _ui.BindPath("export-images", "SelectedDocument.ExportImagesCommand");
         _ui.BindPath("export-text", "SelectedDocument.ExportTextCommand");
+        _ui.BindPath("export-tables", "SelectedDocument.ExportTablesCommand");
         _ui.BindPath("ocr", "SelectedDocument.RunOcrCommand");
         _ui.BindPath("compress", "SelectedDocument.CompressCommand");
 

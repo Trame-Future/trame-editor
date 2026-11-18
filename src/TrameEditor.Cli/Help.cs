@@ -10,6 +10,10 @@ public static class Help
               Elenca le righe di testo con posizione e se sono modificabili.
               Da qui si prende l'indice da passare a "sostituisci".
 
+          tabella <file.pdf> [<destinazione.csv|.xlsx>] [--pagina N] [--tutte]
+                  [--separatore ";"] [--sovrascrivi]
+              Riconosce le tabelle e le restituisce, o le salva in CSV/Excel.
+
           sostituisci <origine.pdf> <destinazione.pdf> --nuovo "<testo>"
                       (--riga <indice> | --testo "<testo esatto>") [--pagina N] [--sovrascrivi]
               Riscrive una riga. Dichiara sempre quale carattere è stato usato.

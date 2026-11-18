@@ -11,6 +11,7 @@ public static class Dispatcher
     public static object Run(CommandLine line) => line.Verb switch
     {
         "righe" => LinesCommand.Run(line),
+        "tabella" => TableCommand.Run(line),
         "sostituisci" => ReplaceCommand.Run(line),
         "anonimizza" => RedactCommand.Run(line),
         "firme" => SignaturesCommand.Run(line),

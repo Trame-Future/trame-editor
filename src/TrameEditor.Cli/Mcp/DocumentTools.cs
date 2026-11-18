@@ -39,6 +39,37 @@ public static class DocumentTools
         return Run("righe", [file], options);
     }
 
+    [McpServerTool(Name = "tabella")]
+    [Description("""
+        Riconosce le tabelle di un PDF e restituisce le righe e le colonne come dati.
+        Con "destinazione" le salva invece in CSV o in Excel, secondo l'estensione del file.
+        Serve per estrarre righe di documenti di trasporto, fatture, listini ed estratti conto
+        senza doverli ricopiare a mano.
+        Guarda "righeFuoriTabella": sono le righe della pagina rimaste fuori dalla griglia
+        (titoli, prosa, piè di pagina). Se il numero è alto e ti aspettavi più dati, la tabella
+        potrebbe essere fatta in un modo che il riconoscimento non coglie.
+        Limite: serve almeno una seconda riga incolonnata allo stesso modo — da una riga sola
+        non si distingue una tabella da una frase con spazi larghi.
+        """)]
+    public static string Tabella(
+        [Description("Percorso completo del file PDF")] string file,
+        [Description("Dove salvare: un file .csv o .xlsx. Se manca, i dati tornano nella risposta")] string? destinazione = null,
+        [Description("Numero della pagina, da 1")] int pagina = 1,
+        [Description("Cerca tabelle in tutte le pagine")] bool tutte = false,
+        [Description("Separatore del CSV: punto e virgola per Excel in italiano")] string? separatore = null,
+        [Description("Sostituire il file di destinazione se esiste già")] bool sovrascrivi = false)
+    {
+        var positional = destinazione is null ? new[] { file } : [file, destinazione];
+        var options = new Dictionary<string, string?> { ["pagina"] = pagina.ToString() };
+        if (tutte)
+            options["tutte"] = null;
+        if (!string.IsNullOrEmpty(separatore))
+            options["separatore"] = separatore;
+        if (sovrascrivi)
+            options["sovrascrivi"] = null;
+        return Run("tabella", positional, options);
+    }
+
     [McpServerTool(Name = "sostituisci")]
     [Description("""
         Riscrive una riga di testo dentro un PDF, scrivendo il risultato in un file nuovo.
