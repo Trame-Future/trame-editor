@@ -70,6 +70,67 @@ public static class DocumentTools
         return Run("tabella", positional, options);
     }
 
+    [McpServerTool(Name = "trova")]
+    [Description("""
+        Cerca un testo in tutte le pagine di un PDF e dice dove si trova, riga per riga, con
+        l'anteprima di come diventerebbe. Con "destinazione" e "testoNuovo" sostituisce
+        davvero, scrivendo un file nuovo.
+        Usalo in due tempi: prima senza destinazione per vedere quante e quali righe cambiano,
+        poi con la destinazione. Una sostituzione su tutto il documento è facile da sbagliare,
+        e l'anteprima è lì per questo.
+        Guarda "completo" e "righeSaltate": le righe saltate restano come prima nel file
+        prodotto, e vanno riferite a chi te l'ha chiesto.
+        """)]
+    public static string Trova(
+        [Description("Percorso completo del file PDF")] string file,
+        [Description("Il testo da cercare")] string cerca,
+        [Description("Dove scrivere il PDF corretto; se manca, si limita a cercare")] string? destinazione = null,
+        [Description("Il testo che prende il posto di quello cercato (vuoto per cancellarlo)")] string? testoNuovo = null,
+        [Description("Distinguere maiuscole e minuscole")] bool maiuscole = false,
+        [Description("Solo parole intere: «via» non cambia dentro «ovvia»")] bool parolaIntera = false,
+        [Description("Sostituire il file di destinazione se esiste già")] bool sovrascrivi = false)
+    {
+        var positional = destinazione is null ? new[] { file } : [file, destinazione];
+        var options = new Dictionary<string, string?> { ["cerca"] = cerca };
+        if (testoNuovo is not null)
+            options["nuovo"] = testoNuovo;
+        if (maiuscole)
+            options["maiuscole"] = null;
+        if (parolaIntera)
+            options["parola-intera"] = null;
+        if (sovrascrivi)
+            options["sovrascrivi"] = null;
+        return Run("trova", positional, options);
+    }
+
+    [McpServerTool(Name = "moduli")]
+    [Description("""
+        Compila un modulo PDF (AcroForm) una volta per ogni riga di una tabella CSV o Excel:
+        dalla tabella escono N documenti compilati. Le colonne si abbinano ai campi per nome,
+        ignorando maiuscole e spazi.
+        Il nome di ogni file viene dalla prima colonna, o da quella indicata in "nomeDa".
+        Con "appiattisci" i campi diventano testo fisso e non si possono più modificare.
+        Guarda sempre "colonneSenzaCampo" e "campiSenzaColonna": dicono cosa non si è
+        abbinato, ed è l'unico modo per accorgersi che i documenti escono compilati a metà.
+        """)]
+    public static string Moduli(
+        [Description("Il PDF modulo da compilare")] string modulo,
+        [Description("La tabella dei dati (.csv o .xlsx); la prima riga sono i nomi delle colonne")] string dati,
+        [Description("Cartella dove scrivere i documenti compilati")] string cartella,
+        [Description("Colonna da cui prendere il nome dei file; se manca, la prima")] string? nomeDa = null,
+        [Description("Rendere i campi non più modificabili")] bool appiattisci = false,
+        [Description("Sostituire i file che esistono già")] bool sovrascrivi = false)
+    {
+        var options = new Dictionary<string, string?>();
+        if (!string.IsNullOrEmpty(nomeDa))
+            options["nome-da"] = nomeDa;
+        if (appiattisci)
+            options["appiattisci"] = null;
+        if (sovrascrivi)
+            options["sovrascrivi"] = null;
+        return Run("moduli", [modulo, dati, cartella], options);
+    }
+
     [McpServerTool(Name = "estrai")]
     [Description("""
         Applica un modello di estrazione a un PDF o a una cartella di PDF e restituisce i

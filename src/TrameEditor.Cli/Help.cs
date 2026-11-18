@@ -14,6 +14,14 @@ public static class Help
                   [--separatore ";"] [--sovrascrivi]
               Riconosce le tabelle e le restituisce, o le salva in CSV/Excel.
 
+          trova <file.pdf> [<destinazione.pdf>] --cerca "<testo>" [--nuovo "<testo>"]
+                [--maiuscole] [--parola-intera] [--sovrascrivi]
+              Cerca in tutte le pagine; con la destinazione sostituisce.
+
+          moduli <modulo.pdf> <dati.csv|.xlsx> <cartella> [--nome-da <colonna>]
+                 [--appiattisci] [--sovrascrivi]
+              Compila il modulo una volta per riga della tabella.
+
           estrai <file.pdf|cartella> [<destinazione.csv|.xlsx>] --modello <modello.json>
                  [--sottocartelle] [--sovrascrivi]
               Legge i campi segnati in un modello da uno o più documenti uguali.
