@@ -70,6 +70,66 @@ public static class DocumentTools
         return Run("tabella", positional, options);
     }
 
+    [McpServerTool(Name = "estrai")]
+    [Description("""
+        Applica un modello di estrazione a un PDF o a una cartella di PDF e restituisce i
+        campi come dati: una riga per documento. Il modello è un file JSON che dice dove
+        stanno i campi sulla pagina, e si prepara una volta sola nell'applicazione.
+        Serve quando gli stessi dati vanno presi da molti documenti fatti allo stesso modo:
+        fatture di un fornitore, bollette, estratti conto.
+        Guarda "completi" e "campiVuoti": un campo vuoto può esserlo davvero, ma se molti
+        documenti hanno campi vuoti il modello non corrisponde più a come sono fatti oggi.
+        """)]
+    public static string Estrai(
+        [Description("File PDF, oppure la cartella dei PDF da leggere")] string file,
+        [Description("Il file .json del modello")] string modello,
+        [Description("Dove salvare la tabella dei risultati (.csv o .xlsx); se manca, i dati tornano nella risposta")] string? destinazione = null,
+        [Description("Leggere anche le sottocartelle")] bool sottocartelle = false,
+        [Description("Sostituire il file di destinazione se esiste già")] bool sovrascrivi = false)
+    {
+        var positional = destinazione is null ? new[] { file } : [file, destinazione];
+        var options = new Dictionary<string, string?> { ["modello"] = modello };
+        if (sottocartelle)
+            options["sottocartelle"] = null;
+        if (sovrascrivi)
+            options["sovrascrivi"] = null;
+        return Run("estrai", positional, options);
+    }
+
+    [McpServerTool(Name = "dividi")]
+    [Description("""
+        Divide una stampa cumulativa — molti documenti in un PDF solo — ogni volta che cambia
+        il valore letto in una certa area della pagina (il numero del documento, il codice
+        cliente). Il nome di ogni file prodotto viene da quel valore.
+        L'area si indica con "modello" (più "campo"), oppure con "area" scritta come
+        "sinistra,base,larghezza,altezza" in punti PDF, origine in basso a sinistra.
+        Le pagine senza quel valore restano attaccate al documento che le precede: le fatture
+        di più pagine ripetono il numero solo sulla prima.
+        Leggi sempre "avvisi" prima di dire che è andato tutto bene.
+        """)]
+    public static string Dividi(
+        [Description("Il PDF cumulativo da dividere")] string file,
+        [Description("Cartella dove scrivere i documenti separati")] string cartella,
+        [Description("File .json del modello da cui prendere l'area")] string? modello = null,
+        [Description("Nome del campo del modello da usare; se manca, il primo")] string? campo = null,
+        [Description("Area a mano: \"sinistra,base,larghezza,altezza\" in punti PDF")] string? area = null,
+        [Description("Testo da mettere davanti al nome di ogni file prodotto")] string? prefisso = null,
+        [Description("Sostituire i file che esistono già")] bool sovrascrivi = false)
+    {
+        var options = new Dictionary<string, string?>();
+        if (!string.IsNullOrEmpty(modello))
+            options["modello"] = modello;
+        if (!string.IsNullOrEmpty(campo))
+            options["campo"] = campo;
+        if (!string.IsNullOrEmpty(area))
+            options["area"] = area;
+        if (!string.IsNullOrEmpty(prefisso))
+            options["prefisso"] = prefisso;
+        if (sovrascrivi)
+            options["sovrascrivi"] = null;
+        return Run("dividi", [file, cartella], options);
+    }
+
     [McpServerTool(Name = "sostituisci")]
     [Description("""
         Riscrive una riga di testo dentro un PDF, scrivendo il risultato in un file nuovo.

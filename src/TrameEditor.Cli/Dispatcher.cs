@@ -12,6 +12,8 @@ public static class Dispatcher
     {
         "righe" => LinesCommand.Run(line),
         "tabella" => TableCommand.Run(line),
+        "estrai" => ExtractCommand.Run(line),
+        "dividi" => SplitCommand.Run(line),
         "sostituisci" => ReplaceCommand.Run(line),
         "anonimizza" => RedactCommand.Run(line),
         "firme" => SignaturesCommand.Run(line),

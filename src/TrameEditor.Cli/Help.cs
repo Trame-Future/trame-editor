@@ -14,6 +14,14 @@ public static class Help
                   [--separatore ";"] [--sovrascrivi]
               Riconosce le tabelle e le restituisce, o le salva in CSV/Excel.
 
+          estrai <file.pdf|cartella> [<destinazione.csv|.xlsx>] --modello <modello.json>
+                 [--sottocartelle] [--sovrascrivi]
+              Legge i campi segnati in un modello da uno o più documenti uguali.
+
+          dividi <file.pdf> <cartella> (--modello <m.json> [--campo <nome>] | --area "l,b,w,h")
+                 [--prefisso <testo>] [--sovrascrivi]
+              Divide una stampa cumulativa quando cambia il valore letto in un'area.
+
           sostituisci <origine.pdf> <destinazione.pdf> --nuovo "<testo>"
                       (--riga <indice> | --testo "<testo esatto>") [--pagina N] [--sovrascrivi]
               Riscrive una riga. Dichiara sempre quale carattere è stato usato.

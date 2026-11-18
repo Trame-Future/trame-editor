@@ -127,7 +127,7 @@ public class McpServerTests : IDisposable
 
         var names = tools.EnumerateArray().Select(t => t.GetProperty("name").GetString()).ToList();
         Assert.Equal(
-            ["anonimizza", "fattura", "firme", "righe", "sostituisci", "tabella"],
+            ["anonimizza", "dividi", "estrai", "fattura", "firme", "righe", "sostituisci", "tabella"],
             names.Order().ToList());
         // Senza descrizione un agente non sa quando usare uno strumento: vale come il codice.
         Assert.All(tools.EnumerateArray(), tool =>
