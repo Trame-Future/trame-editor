@@ -58,15 +58,24 @@ public class AreaAndTextRedactionTests : IDisposable
         return texts;
     }
 
-    /// <summary>La riga centrale sta a circa 842-300 = 542 punti dal fondo.</summary>
-    private static RedactionArea MiddleLine() => new(1, 50, 530, 300, 25);
+    /// <summary>
+    /// L'area attorno alla riga centrale, ricavata <b>dal documento stesso</b>. Fissarla a
+    /// coordinate assolute legava il test a dove il font di sistema posiziona il testo:
+    /// verde in locale e rosso sul runner, dove bastavano pochi punti di differenza.
+    /// </summary>
+    private RedactionArea MiddleLine(string pdf)
+    {
+        using var inspector = new PdfTextInspector(pdf);
+        var line = inspector.GetLines(1).Single(l => l.Text.Contains("riservato"));
+        return new RedactionArea(1, line.Left - 5, line.Bottom - 5, line.Width + 10, line.Height + 10);
+    }
 
     [Fact]
     public void TheTextInsideTheAreaIsReallyGone()
     {
         var pdf = Document();
 
-        var result = PdfAreaRedactor.Apply(pdf, Target(), [MiddleLine()]);
+        var result = PdfAreaRedactor.Apply(pdf, Target(), [MiddleLine(pdf)]);
 
         Assert.Equal(1, result.TextLinesRemoved);
         var texts = TextsOf(Target());
@@ -79,7 +88,7 @@ public class AreaAndTextRedactionTests : IDisposable
     {
         var pdf = Document();
 
-        PdfAreaRedactor.Apply(pdf, Target(), [MiddleLine()]);
+        PdfAreaRedactor.Apply(pdf, Target(), [MiddleLine(pdf)]);
 
         var texts = TextsOf(Target());
         Assert.Contains(texts, t => t.Contains("Intestazione"));

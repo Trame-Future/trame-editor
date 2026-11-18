@@ -1,5 +1,6 @@
 using PdfSharp.Drawing;
 using PdfSharp.Fonts;
+using TrameEditor.Core.Pdf;
 using TrameEditor.Core.Tables;
 using UglyToad.PdfPig;
 
@@ -49,8 +50,24 @@ public class PdfSplitterTests : IDisposable
         return path;
     }
 
-    /// <summary>L'area del numero: in alto a destra, in coordinate PDF (origine in basso).</summary>
-    private static TemplateField NumberArea() => new("Numero", 1, 410, 725, 160, 25);
+    /// <summary>
+    /// L'area del numero, ricavata <b>dal documento stesso</b> invece che fissata a mano.
+    /// Scriverla a coordinate assolute rendeva i test dipendenti da dove il font di sistema
+    /// posiziona il testo: verdi in locale e rossi sul runner, dove bastava qualche punto di
+    /// differenza per far cadere la scritta fuori dall'area.
+    /// </summary>
+    private static TemplateField NumberArea(string source)
+    {
+        using var inspector = new PdfTextInspector(source);
+        var line = inspector.GetLines(1).FirstOrDefault(l => l.Text.StartsWith("Doc"));
+        if (line is null)
+            return new TemplateField("Numero", 1, 410, 725, 160, 25); // pagina muta: area qualsiasi
+
+        // Un margine attorno alla riga trovata: l'area deve prendere la scritta su tutte le
+        // pagine, non solo su quella misurata.
+        return new TemplateField("Numero", 1,
+            line.Left - 10, line.Bottom - 6, line.Width + 40, line.Height + 12);
+    }
 
     private string Output(string name = "divisi") => Path.Combine(_dir, name);
 
@@ -59,7 +76,7 @@ public class PdfSplitterTests : IDisposable
     {
         var source = Batch("001", "002", "003");
 
-        var result = PdfSplitter.Split(source, NumberArea(), Output());
+        var result = PdfSplitter.Split(source, NumberArea(source), Output());
 
         Assert.Equal(3, result.Parts.Count);
         Assert.Equal(["Doc 001", "Doc 002", "Doc 003"], result.Parts.Select(p => p.Value));
@@ -72,7 +89,7 @@ public class PdfSplitterTests : IDisposable
     {
         var source = Batch("001", "001", "002");
 
-        var result = PdfSplitter.Split(source, NumberArea(), Output());
+        var result = PdfSplitter.Split(source, NumberArea(source), Output());
 
         Assert.Equal(2, result.Parts.Count);
         Assert.Equal(2, result.Parts[0].PageCount);
@@ -87,7 +104,7 @@ public class PdfSplitterTests : IDisposable
     {
         var source = Batch("001", null, "002");
 
-        var result = PdfSplitter.Split(source, NumberArea(), Output());
+        var result = PdfSplitter.Split(source, NumberArea(source), Output());
 
         Assert.Equal(2, result.Parts.Count);
         Assert.Equal(2, result.Parts[0].PageCount);
@@ -100,7 +117,7 @@ public class PdfSplitterTests : IDisposable
     {
         var source = Batch("412", "413");
 
-        var result = PdfSplitter.Split(source, NumberArea(), Output(), namePrefix: "fattura-");
+        var result = PdfSplitter.Split(source, NumberArea(source), Output(), namePrefix: "fattura-");
 
         Assert.Contains(result.Parts, p => Path.GetFileName(p.OutputPath) == "fattura-Doc 412.pdf");
     }
@@ -124,7 +141,7 @@ public class PdfSplitterTests : IDisposable
     {
         var source = Batch("001", "002", "001");
 
-        var result = PdfSplitter.Split(source, NumberArea(), Output());
+        var result = PdfSplitter.Split(source, NumberArea(source), Output());
 
         Assert.Equal(3, result.Parts.Count);
         Assert.Contains(result.Warnings, w => w.Contains("ricompare"));
@@ -140,7 +157,7 @@ public class PdfSplitterTests : IDisposable
         File.WriteAllText(Path.Combine(folder, "Doc 001.pdf"), "roba da non perdere");
 
         var error = Assert.Throws<InvalidOperationException>(
-            () => PdfSplitter.Split(source, NumberArea(), folder));
+            () => PdfSplitter.Split(source, NumberArea(source), folder));
 
         Assert.Contains("Esiste già", error.Message);
         Assert.Equal("roba da non perdere", File.ReadAllText(Path.Combine(folder, "Doc 001.pdf")));
@@ -157,7 +174,7 @@ public class PdfSplitterTests : IDisposable
     {
         var source = Batch("001", "002", "003", "004", "005");
 
-        var result = PdfSplitter.Split(source, NumberArea(), Output());
+        var result = PdfSplitter.Split(source, NumberArea(source), Output());
 
         Assert.Equal(5, result.Parts.Count);
         Assert.Contains(result.Warnings, w => w.Contains("Ogni pagina è diventata un documento"));
@@ -169,7 +186,7 @@ public class PdfSplitterTests : IDisposable
     {
         var source = Batch("001", "001", "002", "002", "003");
 
-        var result = PdfSplitter.Split(source, NumberArea(), Output());
+        var result = PdfSplitter.Split(source, NumberArea(source), Output());
 
         Assert.Equal(3, result.Parts.Count);
         Assert.DoesNotContain(result.Warnings, w => w.Contains("Ogni pagina"));
@@ -180,7 +197,7 @@ public class PdfSplitterTests : IDisposable
     {
         var source = Batch(null, "001");
 
-        var result = PdfSplitter.Split(source, NumberArea(), Output());
+        var result = PdfSplitter.Split(source, NumberArea(source), Output());
 
         Assert.Equal(2, result.Parts.Count);
         Assert.Contains(result.Parts, p => Path.GetFileName(p.OutputPath) == "senza-valore.pdf");

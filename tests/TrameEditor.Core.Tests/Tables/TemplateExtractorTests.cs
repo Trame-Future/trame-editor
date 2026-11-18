@@ -45,11 +45,17 @@ public class TemplateExtractorTests : IDisposable
         return path;
     }
 
+    /// <summary>
+    /// Le aree sono volutamente più larghe del testo che devono prendere: dove il font di
+    /// sistema posiziona la scritta cambia di qualche punto da una macchina all'altra, e
+    /// un'area cucita addosso al testo rende il test verde qui e rosso sul runner.
+    /// Restano comunque ben separate fra loro, così continuano a distinguere i tre campi.
+    /// </summary>
     private static ExtractionTemplate Template() => new("Fattura fornitore",
     [
-        new TemplateField("Numero", 1, 395, 730, 160, 20),
-        new TemplateField("Cliente", 1, 55, 670, 300, 20),
-        new TemplateField("Totale", 1, 395, 130, 160, 20),
+        new TemplateField("Numero", 1, 380, 720, 200, 35),
+        new TemplateField("Cliente", 1, 45, 660, 320, 35),
+        new TemplateField("Totale", 1, 380, 120, 200, 35),
     ]);
 
     [Fact]
@@ -155,8 +161,8 @@ public class TemplateExtractorTests : IDisposable
         var pdf = Invoice("700", "Cliente", "7,00");
         var template = new ExtractionTemplate("Due pagine",
         [
-            new TemplateField("Numero", 1, 395, 730, 160, 20),
-            new TemplateField("Allegato", 2, 60, 700, 200, 20),
+            new TemplateField("Numero", 1, 380, 720, 200, 35),
+            new TemplateField("Allegato", 2, 45, 690, 220, 35),
         ]);
 
         var result = TemplateExtractor.Apply(template, pdf);
