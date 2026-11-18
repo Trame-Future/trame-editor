@@ -14,6 +14,13 @@ public static class Help
                   [--separatore ";"] [--sovrascrivi]
               Riconosce le tabelle e le restituisce, o le salva in CSV/Excel.
 
+          sorveglia <cartella> (--anonimizza | --comprimi | --pdfa | --proteggi <pwd>)
+              Lavora una volta i PDF pronti nella cartella e li sposta in fatti/non riusciti.
+
+          fascicolo <fascicolo.pdf> <doc1.pdf> <doc2.pdf> ... | --cartella <percorso>
+                    [--senza-indice] [--titolo-indice "<testo>"] [--sovrascrivi]
+              Unisce con segnalibri e indice cliccabile.
+
           trova <file.pdf> [<destinazione.pdf>] --cerca "<testo>" [--nuovo "<testo>"]
                 [--maiuscole] [--parola-intera] [--sovrascrivi]
               Cerca in tutte le pagine; con la destinazione sostituisce.

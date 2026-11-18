@@ -70,6 +70,39 @@ public static class DocumentTools
         return Run("tabella", positional, options);
     }
 
+    [McpServerTool(Name = "fascicolo")]
+    [Description("""
+        Unisce più PDF in un fascicolo consultabile: un segnalibro per documento e, se non la
+        escludi, una pagina di indice con i titoli cliccabili e i numeri di pagina.
+        Il titolo di ogni voce è il nome del file senza estensione.
+        Serve per raccolte di allegati — fascicoli di bilancio, pratiche, perizie — dove
+        unire e basta produce un malloppo in cui nessuno ritrova più niente.
+        Un file illeggibile viene escluso e dichiarato negli avvisi invece di far fallire tutto.
+        """)]
+    public static string Fascicolo(
+        [Description("Dove scrivere il fascicolo")] string destinazione,
+        [Description("I PDF da unire, nell'ordine voluto")] string[]? documenti = null,
+        [Description("In alternativa: una cartella di PDF, uniti in ordine alfabetico")] string? cartella = null,
+        [Description("Non mettere la pagina di indice (restano i segnalibri)")] bool senzaIndice = false,
+        [Description("Titolo della pagina di indice")] string? titoloIndice = null,
+        [Description("Sostituire il file di destinazione se esiste già")] bool sovrascrivi = false)
+    {
+        var positional = new List<string> { destinazione };
+        if (documenti is not null)
+            positional.AddRange(documenti);
+
+        var options = new Dictionary<string, string?>();
+        if (!string.IsNullOrEmpty(cartella))
+            options["cartella"] = cartella;
+        if (senzaIndice)
+            options["senza-indice"] = null;
+        if (!string.IsNullOrEmpty(titoloIndice))
+            options["titolo-indice"] = titoloIndice;
+        if (sovrascrivi)
+            options["sovrascrivi"] = null;
+        return Run("fascicolo", [.. positional], options);
+    }
+
     [McpServerTool(Name = "trova")]
     [Description("""
         Cerca un testo in tutte le pagine di un PDF e dice dove si trova, riga per riga, con

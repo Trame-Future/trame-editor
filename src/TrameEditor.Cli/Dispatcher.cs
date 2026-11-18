@@ -16,6 +16,8 @@ public static class Dispatcher
         "dividi" => SplitCommand.Run(line),
         "trova" => FindReplaceCommand.Run(line),
         "moduli" => FormsCommand.Run(line),
+        "fascicolo" => DossierCommand.Run(line),
+        "sorveglia" => WatchCommand.Run(line),
         "sostituisci" => ReplaceCommand.Run(line),
         "anonimizza" => RedactCommand.Run(line),
         "firme" => SignaturesCommand.Run(line),
