@@ -10,7 +10,7 @@
          andrebbe a sovrascrivere TrameEditor.exe, cioè l'applicazione. -->
     <AssemblyName>trameeditor-cli</AssemblyName>
     <RootNamespace>TrameEditor.Cli</RootNamespace>
-    <Version>2.14.0</Version>
+    <Version>3.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

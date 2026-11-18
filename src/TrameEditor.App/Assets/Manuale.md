@@ -391,6 +391,81 @@ leggibile in PDF: senza quella otterresti un file illeggibile esattamente come p
 In entrambi i casi **gli originali non vengono mai toccati**: i risultati finiscono nella
 cartella che scegli, e i nomi già presenti non vengono sovrascritti.
 
+## Esporta le tabelle 📊
+
+**Converti → Esporta le tabelle…**: TrameEditor riconosce le righe e le colonne della pagina
+e le salva in **Excel** o in **CSV**. Prima di salvare ti dice quante righe ha trovato e
+quante ne ha lasciate fuori (titoli, testo scorrevole, piè di pagina): se il secondo numero è
+alto, la tabella è fatta in un modo che il riconoscimento non coglie.
+
+Una tabella si riconosce dall'**incolonnamento**: servono almeno due righe allineate allo
+stesso modo. Una riga sola non si distingue da una frase con spazi larghi, e inventarsi
+colonne che non ci sono sarebbe peggio che non trovarle.
+
+## Trova e sostituisci in tutto il documento 🔁
+
+**Modifica → Trova e sostituisci nel documento…**: cerca un testo in tutte le pagine e ti
+mostra l'elenco delle righe che cambierebbero, con il prima e il dopo. Solo dopo che hai
+guardato chiede dove salvare la copia corretta.
+
+Le righe non modificabili (testo ruotato, scansioni senza OCR) vengono dichiarate prima e
+restano come sono.
+
+## Dividi una stampa cumulativa ✂
+
+**Pagine → Dividi una stampa cumulativa…**: quando il gestionale stampa duecento fatture in
+un PDF solo, questo comando le separa. Si indica l'**area della pagina** dove sta il valore
+che cambia da un documento all'altro — il numero della fattura, il codice cliente — e il
+nome di ogni file viene da quel valore.
+
+Le pagine che in quell'area non hanno niente restano attaccate al documento che le precede:
+le fatture di più pagine ripetono il numero solo sulla prima.
+
+Se ti ritrovi un file per pagina, l'area che hai scelto contiene testo normale e non un
+numero che si ripete: te lo dice anche il programma.
+
+## Fascicolo con indice 📑
+
+**Pagine → Crea un fascicolo con indice…**: unisce più PDF aggiungendo un **segnalibro** per
+documento e, se vuoi, una **pagina di indice** con i titoli cliccabili e i numeri di pagina.
+Il titolo di ogni voce è il nome del file.
+
+Per fascicoli di bilancio, pratiche e perizie è la differenza fra un malloppo e un documento
+che si consulta.
+
+## Compila moduli da una tabella 📋
+
+**Strumenti → Compila moduli da una tabella…**: un modulo PDF più un file CSV o Excel
+diventano tanti documenti compilati, uno per riga. Le colonne si abbinano ai campi del
+modulo **per nome**, senza badare a maiuscole e spazi.
+
+Alla fine ti dice cosa non si è abbinato: le colonne avanzate e i campi rimasti vuoti. È la
+parte che conta — un modulo compilato a metà senza dirlo è peggio di uno non compilato.
+
+## Cartella sorvegliata 👁
+
+**Strumenti → Sorveglia una cartella…**: i PDF che arrivano in una cartella vengono lavorati
+da soli e spostati in **fatti** o **non riusciti**, con un registro in `registro.csv` che si
+apre in Excel.
+
+**Guarda solo finché TrameEditor è aperto.** Chiudendo il programma la sorveglianza si ferma:
+non è un servizio di Windows, e non vogliamo farti credere che lavori di notte. La stessa
+voce di menu la ferma quando è attiva.
+
+Un file che sta ancora arrivando — una copia da rete, uno scanner — non viene toccato: si
+aspetta che abbia finito di crescere.
+
+## Oscura un'area 🖍
+
+Oltre ad **Anonimizza**, che riconosce codici fiscali e IBAN, da riga di comando puoi
+cancellare tutto quello che sta dentro un rettangolo: una firma, una fotografia, un timbro.
+Il contenuto viene **tolto davvero**, non coperto — un rettangolo nero disegnato sopra lascia
+il testo selezionabile, ed è così che ogni anno si pubblicano documenti che si credevano
+oscurati.
+
+Lo stesso comando toglie i dati personali dai file **.txt e .md**, conservando codifica e
+fine riga del file originale.
+
 ## Scorciatoie
 
 | Tasti | Azione |
@@ -422,10 +497,20 @@ durante l'installazione hai scelto *"Aggiungi la cartella al PATH"*, basta scriv
 ```
 trameeditor-cli righe documento.pdf
 trameeditor-cli sostituisci documento.pdf corretto.pdf --testo "64" --nuovo "99"
+trameeditor-cli tabella documento.pdf righe.xlsx
+trameeditor-cli trova documento.pdf --cerca "Rossi SRL"
+trameeditor-cli dividi stampa.pdf .\divisi --area "410,725,160,25"
+trameeditor-cli estrai .\fatture dati.xlsx --modello modello.json
+trameeditor-cli moduli modulo.pdf dati.csv .\compilati
+trameeditor-cli fascicolo fascicolo.pdf --cartella .\allegati
+trameeditor-cli oscura documento.pdf oscurato.pdf --area "1:50,530,300,25"
+trameeditor-cli sorveglia .\in-arrivo --comprimi
 trameeditor-cli anonimizza documento.pdf pulito.pdf --tipi cf,iban
 trameeditor-cli firme documento.p7m
 trameeditor-cli fattura fattura.xml
 ```
+
+Scrivendo `trameeditor-cli` senza altro, l'elenco completo dei comandi compare a schermo.
 
 Il primo comando elenca le righe con un **indice**: è il numero da passare a `sostituisci`.
 Nessun comando sovrascrive un file esistente: se serve, si aggiunge `--sovrascrivi`.
