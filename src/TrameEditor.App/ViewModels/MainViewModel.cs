@@ -8,6 +8,7 @@ using Microsoft.Win32;
 using TrameEditor.Core.Markdown;
 using TrameEditor.Core.Invoices;
 using TrameEditor.Core.Pdf;
+using TrameEditor.Core.Tables;
 using TrameEditor.Core.Signatures;
 using TrameEditor.Core.Session;
 
@@ -612,6 +613,240 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             ShowError($"Unione non riuscita:\n{ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Unisce più PDF aggiungendo segnalibri e una pagina di indice cliccabile: su venti
+    /// allegati, unire e basta produce un malloppo in cui nessuno ritrova più niente.
+    /// </summary>
+    [RelayCommand]
+    private void BuildDossier()
+    {
+        var openDialog = new OpenFileDialog
+        {
+            Filter = "PDF (*.pdf)|*.pdf",
+            Multiselect = true,
+            Title = "Scegli i documenti del fascicolo (nell'ordine in cui andranno)",
+        };
+        if (openDialog.ShowDialog() != true)
+            return;
+        if (openDialog.FileNames.Length < 2)
+        {
+            ShowError("Per fare un fascicolo servono almeno due PDF.");
+            return;
+        }
+
+        var saveDialog = new SaveFileDialog { Filter = "PDF (*.pdf)|*.pdf", FileName = "fascicolo.pdf" };
+        if (saveDialog.ShowDialog() != true)
+            return;
+
+        var withIndex = MessageBox.Show(
+            "Vuoi una pagina di indice all'inizio, con i titoli cliccabili?\n\n" +
+            "I segnalibri vengono aggiunti in ogni caso.",
+            "Fascicolo", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+
+        try
+        {
+            var result = PdfDossierBuilder.Build(openDialog.FileNames, saveDialog.FileName, withIndex);
+            if (result.Warnings.Count > 0)
+                MessageBox.Show(string.Join("\n\n", result.Warnings), "Fascicolo",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            OpenPath(saveDialog.FileName);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Fascicolo non riuscito:\n{ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Compila un modulo PDF una volta per ogni riga di una tabella. Alla fine dice cosa non
+    /// si è abbinato: un modulo compilato a metà senza dirlo è peggio di uno non compilato.
+    /// </summary>
+    [RelayCommand]
+    private void FillFormsFromTable()
+    {
+        var formDialog = new OpenFileDialog
+        {
+            Filter = "PDF (*.pdf)|*.pdf",
+            Title = "Scegli il modulo PDF da compilare",
+        };
+        if (formDialog.ShowDialog() != true)
+            return;
+
+        var dataDialog = new OpenFileDialog
+        {
+            Filter = "Tabelle (*.csv;*.xlsx)|*.csv;*.xlsx|Tutti i file|*.*",
+            Title = "Scegli la tabella dei dati (la prima riga sono i nomi delle colonne)",
+        };
+        if (dataDialog.ShowDialog() != true)
+            return;
+
+        var folderDialog = new OpenFolderDialog { Title = "Dove scrivere i documenti compilati" };
+        if (folderDialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            var result = FormBatchFiller.Fill(formDialog.FileName, dataDialog.FileName,
+                folderDialog.FolderName);
+
+            var message = $"Prodotti {result.Documents.Count} documenti.";
+            if (result.Warnings.Count > 0)
+                message += "\n\n" + string.Join("\n\n", result.Warnings);
+            MessageBox.Show(message, "Moduli in serie", MessageBoxButton.OK,
+                result.Warnings.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Compilazione non riuscita:\n{ex.Message}");
+        }
+    }
+
+    private System.Windows.Threading.DispatcherTimer? _watchTimer;
+    private WatchedFolder? _watchedFolder;
+
+    /// <summary>Vero mentre una cartella è sorvegliata: serve alla voce di menu per dire
+    /// «ferma» invece di «sorveglia».</summary>
+    [ObservableProperty]
+    private string _watchStatus = string.Empty;
+
+    /// <summary>
+    /// Sorveglia una cartella: i PDF che arrivano vengono lavorati e spostati in «fatti» o
+    /// «non riusciti».
+    /// <para>
+    /// Guarda <b>solo finché il programma è aperto</b>, e lo dice: far credere a una
+    /// sorveglianza continua sarebbe la bugia più comoda e più dannosa, perché chi lascia i
+    /// file la sera si aspetta di ritrovarli lavorati la mattina.
+    /// </para>
+    /// </summary>
+    [RelayCommand]
+    private void WatchFolder()
+    {
+        if (_watchTimer is not null)
+        {
+            StopWatching();
+            MessageBox.Show("Sorveglianza fermata.", "TrameEditor",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var folderDialog = new OpenFolderDialog { Title = "Quale cartella sorvegliare" };
+        if (folderDialog.ShowDialog() != true)
+            return;
+
+        var recipe = new BatchRecipe(RunOcr: false, Redact: false, Compress: true,
+            ProtectPassword: null, ConvertToPdfA: false);
+
+        var confirm = MessageBox.Show(
+            $"I PDF che compaiono in:\n{folderDialog.FolderName}\n\n" +
+            "verranno compressi e spostati in «fatti» (o in «non riusciti» se qualcosa va " +
+            "storto), con un registro in registro.csv.\n\n" +
+            "La cartella viene guardata soltanto finché TrameEditor resta aperto: " +
+            "chiudendo il programma, la sorveglianza si ferma.\n\nProcedo?",
+            "Cartella sorvegliata", MessageBoxButton.OKCancel, MessageBoxImage.Information);
+        if (confirm != MessageBoxResult.OK)
+            return;
+
+        var layout = WatchedFolderLayout.Under(folderDialog.FolderName);
+        _watchedFolder = new WatchedFolder(layout, (source, outputFolder) =>
+        {
+            var result = BatchProcessor.ProcessFile(source, outputFolder, recipe);
+            return new WatchedFileOutcome(Path.GetFileName(source), result.Success,
+                result.Outcome, result.OutputPath, DateTime.UtcNow);
+        });
+
+        _watchTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(10),
+        };
+        _watchTimer.Tick += (_, _) => RunWatchPass(layout);
+        _watchTimer.Start();
+        WatchStatus = $"Sorveglio {Path.GetFileName(folderDialog.FolderName)}";
+        RunWatchPass(layout);
+    }
+
+    private void RunWatchPass(WatchedFolderLayout layout)
+    {
+        if (_watchedFolder is null)
+            return;
+        try
+        {
+            var outcomes = _watchedFolder.ProcessReady();
+            if (outcomes.Count > 0)
+                WatchStatus = $"Sorveglio {Path.GetFileName(layout.Inbox)} — " +
+                              $"ultimi {outcomes.Count} file lavorati";
+        }
+        catch (Exception ex)
+        {
+            StopWatching();
+            ShowError($"Sorveglianza interrotta:\n{ex.Message}");
+        }
+    }
+
+    private void StopWatching()
+    {
+        _watchTimer?.Stop();
+        _watchTimer = null;
+        _watchedFolder = null;
+        WatchStatus = string.Empty;
+    }
+
+    /// <summary>
+    /// Divide una stampa cumulativa dove cambia il valore letto in un'area della pagina.
+    /// L'area si indica a mano in punti PDF: segnarla col mouse richiederebbe una finestra
+    /// di disegno, che non c'è ancora.
+    /// </summary>
+    [RelayCommand]
+    private void SplitBatchPrint()
+    {
+        var openDialog = new OpenFileDialog
+        {
+            Filter = "PDF (*.pdf)|*.pdf",
+            Title = "Scegli la stampa cumulativa da dividere",
+        };
+        if (openDialog.ShowDialog() != true)
+            return;
+
+        var area = TextPromptDialog.Ask(Application.Current.MainWindow, "Dividi una stampa",
+            "Area in cui leggere il valore su cui dividere (il numero del documento),\n" +
+            "scritta come sinistra,base,larghezza,altezza in punti PDF\n" +
+            "(origine in basso a sinistra, foglio A4 = 595 x 842):",
+            "410,725,160,25");
+        if (string.IsNullOrWhiteSpace(area))
+            return;
+
+        var parts = area.Split(',', StringSplitOptions.TrimEntries);
+        if (parts.Length != 4 || !parts.All(p => double.TryParse(p,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out _)))
+        {
+            ShowError("L'area vuole quattro numeri separati da virgola, col punto come " +
+                      "separatore decimale.");
+            return;
+        }
+
+        var folderDialog = new OpenFolderDialog { Title = "Dove scrivere i documenti separati" };
+        if (folderDialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            var numbers = parts.Select(p => double.Parse(p,
+                System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+            var field = new TemplateField("valore", 1, numbers[0], numbers[1], numbers[2], numbers[3]);
+            var result = PdfSplitter.Split(openDialog.FileName, field, folderDialog.FolderName);
+
+            var message = $"Prodotti {result.Parts.Count} documenti.";
+            if (result.Warnings.Count > 0)
+                message += "\n\n" + string.Join("\n\n", result.Warnings);
+            MessageBox.Show(message, "Dividi una stampa", MessageBoxButton.OK,
+                result.Warnings.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Divisione non riuscita:\n{ex.Message}");
         }
     }
 

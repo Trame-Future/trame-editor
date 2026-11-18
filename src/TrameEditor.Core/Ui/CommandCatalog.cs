@@ -233,6 +233,41 @@ public static class CommandCatalog
         },
         new()
         {
+            Id = "find-replace", SeparatorBefore = true, Label = "Trova e sostituisci",
+            MenuLabel = "Trova e sostituisci nel documento\u2026", Menu = MenuEdit,
+            Description = "Cerca un testo in tutte le pagine e sostituisce le occorrenze scelte",
+            Glyph = "\uE721",
+        },
+        new()
+        {
+            Id = "split-batch", Label = "Dividi stampa", MenuLabel = "Dividi una stampa cumulativa\u2026",
+            Menu = MenuPages,
+            Description = "Separa i documenti di una stampa unica quando cambia un valore sulla pagina",
+            Glyph = "\uE8AB",
+        },
+        new()
+        {
+            Id = "dossier", Label = "Fascicolo", MenuLabel = "Crea un fascicolo con indice\u2026",
+            Menu = MenuPages,
+            Description = "Unisce pi\u00F9 PDF aggiungendo segnalibri e una pagina di indice cliccabile",
+            Glyph = "\uE8A5",
+        },
+        new()
+        {
+            Id = "fill-forms", Label = "Moduli in serie", MenuLabel = "Compila moduli da una tabella\u2026",
+            Menu = MenuTools,
+            Description = "Compila un modulo PDF una volta per ogni riga di un file CSV o Excel",
+            Glyph = "\uE8A5",
+        },
+        new()
+        {
+            Id = "watch-folder", Label = "Cartella sorvegliata", MenuLabel = "Sorveglia una cartella\u2026",
+            Menu = MenuTools,
+            Description = "Lavora da s\u00E9 i PDF che arrivano in una cartella, finch\u00E9 il programma \u00E8 aperto",
+            Glyph = "\uE8B7",
+        },
+        new()
+        {
             Id = "ocr", SeparatorBefore = true, Label = "Riconosci testo", MenuLabel = "Riconosci il testo (OCR)", Menu = MenuConvert,
             Description = "Riconosce il testo delle pagine scansionate (OCR offline ita+eng)",
             Glyph = "OCR", GlyphFont = GlyphFont.Text,

@@ -922,6 +922,89 @@ public partial class PdfDocumentViewModel : DocumentTabViewModel
         }
     }
 
+    /// <summary>
+    /// Cerca un testo in tutte le pagine e, dopo aver mostrato quante righe cambierebbero,
+    /// lo sostituisce scrivendo una copia. L'elenco si mostra prima di toccare niente:
+    /// è la modifica più facile da sbagliare che il programma sappia fare.
+    /// </summary>
+    [RelayCommand]
+    private async Task FindReplaceAsync()
+    {
+        var owner = Application.Current.MainWindow;
+        var search = TextPromptDialog.Ask(owner, "Trova e sostituisci",
+            "Testo da cercare in tutte le pagine:", string.Empty);
+        if (string.IsNullOrEmpty(search))
+            return;
+
+        var replacement = TextPromptDialog.Ask(owner, "Trova e sostituisci",
+            $"Con che cosa sostituire «{search}»? (lascia vuoto per cancellarlo)", string.Empty);
+        if (replacement is null)
+            return;
+
+        var source = _workingPath;
+        List<FindMatch> matches;
+        try
+        {
+            matches = await Task.Run(() => PdfFindReplace.Find(source, search, replacement).ToList());
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ricerca non riuscita:\n{ex.Message}", "TrameEditor",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        if (matches.Count == 0)
+        {
+            MessageBox.Show($"«{search}» non compare in questo documento.", "TrameEditor",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var notEditable = matches.Count(m => !m.Line.IsEditable);
+        var preview = string.Join("\n", matches.Take(8)
+            .Select(m => $"  pag. {m.Line.PageNumber}: {Shorten(m.Before)} → {Shorten(m.After)}"));
+        if (matches.Count > 8)
+            preview += $"\n  … e altre {matches.Count - 8} righe";
+
+        var question = $"Trovate {matches.Sum(m => m.Occurrences)} occorrenze in " +
+                       $"{matches.Count} righe:\n\n{preview}\n\n";
+        if (notEditable > 0)
+            question += $"Attenzione: {notEditable} di queste righe non sono modificabili e " +
+                        "resteranno come sono.\n\n";
+        question += "Vuoi applicare la sostituzione? Verrà scritta una copia del documento.";
+
+        if (MessageBox.Show(question, "Trova e sostituisci",
+                MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
+            return;
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = PdfFilter,
+            FileName = Path.GetFileNameWithoutExtension(FileName) + " - corretto.pdf",
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            var result = await Task.Run(() => PdfFindReplace.Replace(source, dialog.FileName, matches));
+            var message = $"Sostituite {result.OccurrencesReplaced} occorrenze in " +
+                          $"{result.LinesChanged} righe.";
+            if (!result.Complete)
+                message += $"\n\n{result.SkippedLines.Count} righe non sono state riscritte e nel " +
+                           "file prodotto sono rimaste come prima.";
+            MessageBox.Show(message, "TrameEditor", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Sostituzione non riuscita:\n{ex.Message}", "TrameEditor",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static string Shorten(string text) => text.Length <= 34 ? text : text[..34] + "…";
+
     // ----- Chiedi al documento (AI locale, v2.0; pannello condiviso col testo dalla 2.4) -----
 
     [ObservableProperty]

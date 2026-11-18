@@ -257,6 +257,11 @@ public partial class MainWindow : Fluent.RibbonWindow
         _ui.BindPath("export-images", "SelectedDocument.ExportImagesCommand");
         _ui.BindPath("export-text", "SelectedDocument.ExportTextCommand");
         _ui.BindPath("export-tables", "SelectedDocument.ExportTablesCommand");
+        _ui.BindPath("find-replace", "SelectedDocument.FindReplaceCommand");
+        _ui.BindPath("dossier", nameof(MainViewModel.BuildDossierCommand));
+        _ui.BindPath("fill-forms", nameof(MainViewModel.FillFormsFromTableCommand));
+        _ui.BindPath("split-batch", nameof(MainViewModel.SplitBatchPrintCommand));
+        _ui.BindPath("watch-folder", nameof(MainViewModel.WatchFolderCommand));
         _ui.BindPath("ocr", "SelectedDocument.RunOcrCommand");
         _ui.BindPath("compress", "SelectedDocument.CompressCommand");
 
