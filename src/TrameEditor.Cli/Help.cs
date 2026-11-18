@@ -14,6 +14,10 @@ public static class Help
                   [--separatore ";"] [--sovrascrivi]
               Riconosce le tabelle e le restituisce, o le salva in CSV/Excel.
 
+          oscura <file.pdf|.txt> <destinazione> (--area "1:l,b,w,h" | --tipi cf,iban)
+                 [--senza-rettangolo] [--sovrascrivi]
+              Cancella davvero quello che sta in un rettangolo, o i dati in un testo.
+
           sorveglia <cartella> (--anonimizza | --comprimi | --pdfa | --proteggi <pwd>)
               Lavora una volta i PDF pronti nella cartella e li sposta in fatti/non riusciti.
 

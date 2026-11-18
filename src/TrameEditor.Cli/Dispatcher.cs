@@ -18,6 +18,7 @@ public static class Dispatcher
         "moduli" => FormsCommand.Run(line),
         "fascicolo" => DossierCommand.Run(line),
         "sorveglia" => WatchCommand.Run(line),
+        "oscura" => AreaRedactCommand.Run(line),
         "sostituisci" => ReplaceCommand.Run(line),
         "anonimizza" => RedactCommand.Run(line),
         "firme" => SignaturesCommand.Run(line),

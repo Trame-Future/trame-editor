@@ -70,6 +70,39 @@ public static class DocumentTools
         return Run("tabella", positional, options);
     }
 
+    [McpServerTool(Name = "oscura")]
+    [Description("""
+        Cancella davvero il contenuto che sta dentro uno o più rettangoli di un PDF — firme,
+        fotografie, timbri, tabelle intere — scrivendo una copia. Il testo viene tolto, non
+        coperto: un rettangolo nero disegnato sopra lascia il testo selezionabile, ed è così
+        che si pubblicano documenti che si credevano oscurati.
+        Le aree si scrivono "pagina:sinistra,base,larghezza,altezza" in punti PDF con
+        l'origine in basso a sinistra; per più aree si separano con punto e virgola.
+        Sui file .txt e .md non servono aree: con "tipi" si tolgono i dati personali
+        riconosciuti (cf, iban, email, telefono, targa).
+        Guarda sempre "completo" e "righeRimaste": quello che non si è potuto togliere resta
+        coperto ma presente nel file, e va riferito.
+        """)]
+    public static string Oscura(
+        [Description("Il file da oscurare (.pdf, oppure .txt/.md)")] string file,
+        [Description("Dove scrivere la copia oscurata")] string destinazione,
+        [Description("Aree del PDF: \"1:50,530,300,25\"; più aree separate da punto e virgola")] string? area = null,
+        [Description("Per i file di testo: tipi da togliere, separati da virgola. Vuoto = tutti")] string? tipi = null,
+        [Description("Non disegnare il rettangolo nero (il contenuto è comunque tolto)")] bool senzaRettangolo = false,
+        [Description("Sostituire il file di destinazione se esiste già")] bool sovrascrivi = false)
+    {
+        var options = new Dictionary<string, string?>();
+        if (!string.IsNullOrEmpty(area))
+            options["area"] = area;
+        if (!string.IsNullOrEmpty(tipi))
+            options["tipi"] = tipi;
+        if (senzaRettangolo)
+            options["senza-rettangolo"] = null;
+        if (sovrascrivi)
+            options["sovrascrivi"] = null;
+        return Run("oscura", [file, destinazione], options);
+    }
+
     [McpServerTool(Name = "fascicolo")]
     [Description("""
         Unisce più PDF in un fascicolo consultabile: un segnalibro per documento e, se non la
