@@ -1,5 +1,6 @@
 using PdfSharp.Drawing;
 using PdfSharp.Fonts;
+using TrameEditor.Core.Pdf;
 using TrameEditor.Core.Tables;
 
 namespace TrameEditor.Core.Tests.Tables;
@@ -31,9 +32,9 @@ public class TemplateExtractorTests : IDisposable
     /// <summary>Una fattura ridotta all'osso. Le coordinate di PDFsharp hanno l'origine in
     /// alto; quelle dei modelli in basso, come il PDF: su una pagina A4 alta 842 punti, una
     /// scritta disegnata a y=100 sta a 742 punti dal fondo.</summary>
-    private string Invoice(string number, string customer, string total)
+    private string Invoice(string number, string customer, string total, string? folder = null)
     {
-        var path = Path.Combine(_dir, $"fattura-{number}.pdf");
+        var path = Path.Combine(folder ?? _dir, $"fattura-{number}.pdf");
         using var document = new PdfSharp.Pdf.PdfDocument();
         var page = document.AddPage();
         using var gfx = XGraphics.FromPdfPage(page);
@@ -46,17 +47,35 @@ public class TemplateExtractorTests : IDisposable
     }
 
     /// <summary>
-    /// Le aree sono volutamente più larghe del testo che devono prendere: dove il font di
-    /// sistema posiziona la scritta cambia di qualche punto da una macchina all'altra, e
-    /// un'area cucita addosso al testo rende il test verde qui e rosso sul runner.
-    /// Restano comunque ben separate fra loro, così continuano a distinguere i tre campi.
+    /// Il modello si costruisce <b>misurando un esemplare</b>, non scrivendo le coordinate a
+    /// mano: è anche il modo in cui lo costruirà l'utente, segnando i campi su un documento
+    /// vero. Le coordinate assolute legavano il test a dove il font di sistema mette il
+    /// testo, e su un'altra macchina i campi uscivano tutti vuoti.
     /// </summary>
-    private static ExtractionTemplate Template() => new("Fattura fornitore",
-    [
-        new TemplateField("Numero", 1, 380, 720, 200, 35),
-        new TemplateField("Cliente", 1, 45, 660, 320, 35),
-        new TemplateField("Totale", 1, 380, 120, 200, 35),
-    ]);
+    private ExtractionTemplate Template()
+    {
+        // L'esemplare va fuori dalla cartella di lavoro: i test che la scandiscono per intero
+        // conterebbero anche lui.
+        var apart = Directory.CreateDirectory(Path.Combine(_dir, "esemplare")).FullName;
+        var sample = Invoice("000", "Esemplare", "0,00", apart);
+        using var inspector = new PdfTextInspector(sample);
+        var lines = inspector.GetLines(1);
+
+        return new ExtractionTemplate("Fattura fornitore",
+        [
+            Field("Numero", lines, "Fattura n."),
+            Field("Cliente", lines, "Esemplare"),
+            Field("Totale", lines, "Totale:"),
+        ]);
+    }
+
+    /// <summary>Un campo largo quanto serve attorno alla riga che contiene quel testo.</summary>
+    private static TemplateField Field(string name, IReadOnlyList<PdfTextLine> lines, string contains)
+    {
+        var line = lines.First(l => l.Text.Contains(contains));
+        return new TemplateField(name, 1, line.Left - 8, line.Bottom - 6,
+            Math.Max(line.Width + 120, 160), line.Height + 12);
+    }
 
     [Fact]
     public void ReadsTheFieldsMarkedOnTheTemplate()
