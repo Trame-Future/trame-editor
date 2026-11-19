@@ -178,9 +178,12 @@ public class TemplateExtractorTests : IDisposable
     public void AShorterDocument_LeavesTheMissingPagesEmpty()
     {
         var pdf = Invoice("700", "Cliente", "7,00");
+        // Il campo della prima pagina si misura come gli altri; quello della seconda indica
+        // una pagina che in questo documento non c'è.
+        var measured = Template().Fields.First(f => f.Name == "Numero");
         var template = new ExtractionTemplate("Due pagine",
         [
-            new TemplateField("Numero", 1, 380, 720, 200, 35),
+            measured,
             new TemplateField("Allegato", 2, 45, 690, 220, 35),
         ]);
 

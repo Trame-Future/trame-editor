@@ -59,9 +59,14 @@ public class PdfSplitterTests : IDisposable
     private static TemplateField NumberArea(string source)
     {
         using var inspector = new PdfTextInspector(source);
-        var line = inspector.GetLines(1).FirstOrDefault(l => l.Text.StartsWith("Doc"));
+        // Si cerca su tutte le pagine, non solo sulla prima: una stampa può cominciare con
+        // una pagina senza numero, e misurare lì darebbe un'area a caso.
+        PdfTextLine? line = null;
+        for (var page = 1; page <= inspector.PageCount && line is null; page++)
+            line = inspector.GetLines(page).FirstOrDefault(l => l.Text.StartsWith("Doc"));
+
         if (line is null)
-            return new TemplateField("Numero", 1, 410, 725, 160, 25); // pagina muta: area qualsiasi
+            return new TemplateField("Numero", 1, 410, 725, 160, 25); // nessun numero: area qualsiasi
 
         // Un margine attorno alla riga trovata: l'area deve prendere la scritta su tutte le
         // pagine, non solo su quella misurata.
